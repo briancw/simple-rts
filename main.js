@@ -114,17 +114,32 @@ function Terrain(terrain_canvas_id){
 
 	this.get_tile_corners = function(canvas_x, canvas_y){
 		var bounding_box = new Array();
+
+		canvas_x -= this.translation[0];
+		canvas_y -= this.translation[1];
+
 		var coords = this.iso_to_cartesian(canvas_x, canvas_y);
+
+		var tmp_translation_x = this.translation[0];
+		var tmp_translation_y = this.translation[1];
+		// console.log(this.translation[0] % this.tile_width);
 
 		coords[0] = Math.floor( coords[0] / this.tile_width ) * this.tile_width;
 		coords[1] = Math.floor( coords[1] / this.tile_width ) * this.tile_width;
-
 
 		bounding_box[0] = this.cartesian_to_iso( coords[0], coords[1] );
 		bounding_box[1] = this.cartesian_to_iso( coords[0]+this.tile_width, coords[1] );
 		bounding_box[2] = this.cartesian_to_iso( coords[0]+this.tile_width, coords[1]+this.tile_width );
 		bounding_box[3] = this.cartesian_to_iso( coords[0], coords[1]+this.tile_width );
 
+		bounding_box[0][0] += tmp_translation_x;
+		bounding_box[0][1] += tmp_translation_y;
+		bounding_box[1][0] += tmp_translation_x;
+		bounding_box[1][1] += tmp_translation_y;
+		bounding_box[2][0] += tmp_translation_x;
+		bounding_box[2][1] += tmp_translation_y;
+		bounding_box[3][0] += tmp_translation_x;
+		bounding_box[3][1] += tmp_translation_y;
 
 		return bounding_box;
 	}
@@ -181,7 +196,7 @@ function UI(ui_canvas_id){
 		self.ui_ctx.fillStyle = 'rgba(0,100,0,0.5)';
 
 		$('#'+this.ui_id).mousemove(function(e){
-			var bounding_box = terrain.get_tile_corners(e.pageX + terrain.translation[0], e.pageY + terrain.translation[1]);
+			var bounding_box = terrain.get_tile_corners(e.pageX, e.pageY);
 
 			self.clear_ui();
 			self.ui_ctx.beginPath();
