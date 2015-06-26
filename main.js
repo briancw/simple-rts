@@ -23,11 +23,11 @@ $(document).ready(function(){
 		if(needs_update){
 			terrain.clear_map();
 			terrain.start_path();
-			var i = 0;
+			var i = -9;
 			while(i < 10){
 				terrain.draw_tile(i*50,0);
 
-				var i2 = 0;
+				var i2 = -9;
 				while(i2 < 10){
 					terrain.draw_tile(i*50,i2*50);
 					i2++;
@@ -67,7 +67,8 @@ function Terrain(terrain_canvas_id){
 	}
 
 	this.clear_map = function(){
-		this.terrain_ctx.clearRect(0,0,doc_width, doc_height);
+		// Clears only the right amount of space even after canvas translation
+		this.terrain_ctx.clearRect( -this.translation[0], -this.translation[1], doc_width + Math.abs(this.translation[0]), doc_height + Math.abs(this.translation[1]) );
 	}
 
 	this.draw_tile = function(x, y){
@@ -164,7 +165,6 @@ function UI(ui_canvas_id){
 				var tmp_difference_x = e.pageX - self.last_x;
 				var tmp_difference_y = e.pageY - self.last_y;
 
-				// self.ui_ctx.translate(tmp_difference_x, tmp_difference_y);
 				terrain.translate_map(tmp_difference_x, tmp_difference_y);
 
 				self.last_x = e.pageX;
@@ -213,7 +213,7 @@ function UI(ui_canvas_id){
 			self.ui_ctx.fillStyle = "#000";
 			
 			var tmp_iso_display = iso_coords[0] + ', ' + iso_coords[1];
-			self.ui_ctx.fillText(tmp_iso_display, bounding_box[0][0] - 6, bounding_box[0][1]);
+			self.ui_ctx.fillText(tmp_iso_display, bounding_box[0][0] - 6, bounding_box[0][1] + 20);
 
 		});
 	}
