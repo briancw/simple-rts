@@ -35,7 +35,7 @@ $(document).ready(function(){
 				i++;
 			}
 			terrain.fill();
-			terrain.stroke();
+			// terrain.stroke();
 		}
 		needs_update = false;
 	}, 10);
@@ -109,7 +109,6 @@ function Terrain(terrain_canvas_id){
 		this.translation[0] += difference_x;
 		this.translation[1] += difference_y;
 		this.terrain_ctx.translate(difference_x, difference_y);
-		// console.log( terrain.translation );
 	}
 
 	this.get_tile_corners = function(canvas_x, canvas_y){
@@ -122,7 +121,6 @@ function Terrain(terrain_canvas_id){
 
 		var tmp_translation_x = this.translation[0];
 		var tmp_translation_y = this.translation[1];
-		// console.log(this.translation[0] % this.tile_width);
 
 		coords[0] = Math.floor( coords[0] / this.tile_width ) * this.tile_width;
 		coords[1] = Math.floor( coords[1] / this.tile_width ) * this.tile_width;
@@ -193,10 +191,14 @@ function UI(ui_canvas_id){
 	}
 
 	this.highlight_tile = function(){
-		self.ui_ctx.fillStyle = 'rgba(0,100,0,0.5)';
 
 		$('#'+this.ui_id).mousemove(function(e){
+			self.ui_ctx.fillStyle = 'rgba(0,100,0,0.5)';
 			var bounding_box = terrain.get_tile_corners(e.pageX, e.pageY);
+			var iso_coords = terrain.iso_to_cartesian(e.pageX - terrain.translation[0], e.pageY - terrain.translation[1]);
+			
+			iso_coords[0] = Math.floor(iso_coords[0] / terrain.tile_width);
+			iso_coords[1] = Math.floor(iso_coords[1] / terrain.tile_width);
 
 			self.clear_ui();
 			self.ui_ctx.beginPath();
@@ -207,6 +209,12 @@ function UI(ui_canvas_id){
 			self.ui_ctx.closePath();
 			// self.ui_ctx.stroke();
 			self.ui_ctx.fill();
+
+			self.ui_ctx.fillStyle = "#000";
+			
+			var tmp_iso_display = iso_coords[0] + ', ' + iso_coords[1];
+			self.ui_ctx.fillText(tmp_iso_display, bounding_box[0][0] - 6, bounding_box[0][1]);
+
 		});
 	}
 }
