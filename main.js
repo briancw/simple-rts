@@ -35,7 +35,7 @@ $(document).ready(function(){
 				i++;
 			}
 			terrain.fill();
-			// terrain.stroke();
+			terrain.stroke();
 		}
 		needs_update = false;
 	}, 10);
@@ -56,6 +56,7 @@ function Terrain(terrain_canvas_id){
 	this.start_path = function(){
 		this.terrain_ctx.beginPath();
 		this.terrain_ctx.fillStyle = '#4C7124';
+		this.terrain_ctx.strokeStyle = '#fff';
 	}
 
 	this.fill = function(){
@@ -67,8 +68,7 @@ function Terrain(terrain_canvas_id){
 	}
 
 	this.clear_map = function(){
-		// Clears only the right amount of space even after canvas translation
-		this.terrain_ctx.clearRect( -this.translation[0], -this.translation[1], doc_width + Math.abs(this.translation[0]), doc_height + Math.abs(this.translation[1]) );
+		this.terrain_ctx.clearRect(0, 0, doc_width, doc_height);
 	}
 
 	this.draw_tile = function(x, y){
@@ -83,8 +83,8 @@ function Terrain(terrain_canvas_id){
 		var pt_x = (input_x - input_y);
 		var pt_y = ((input_x + input_y) / 2);
 
-		pt_x += (this.window_width/2);
-		pt_y += (this.window_height/2);
+		pt_x += (this.window_width/2) + this.translation[0];
+		pt_y += (this.window_height/2) + this.translation[1];
 		return( [pt_x, pt_y] );
 	}
 
@@ -109,7 +109,6 @@ function Terrain(terrain_canvas_id){
 	this.translate_map = function(difference_x, difference_y){
 		this.translation[0] += difference_x;
 		this.translation[1] += difference_y;
-		this.terrain_ctx.translate(difference_x, difference_y);
 	}
 
 	this.get_tile_corners = function(canvas_x, canvas_y){
@@ -120,9 +119,6 @@ function Terrain(terrain_canvas_id){
 
 		var coords = this.iso_to_cartesian(canvas_x, canvas_y);
 
-		var tmp_translation_x = this.translation[0];
-		var tmp_translation_y = this.translation[1];
-
 		coords[0] = Math.floor( coords[0] / this.tile_width ) * this.tile_width;
 		coords[1] = Math.floor( coords[1] / this.tile_width ) * this.tile_width;
 
@@ -130,15 +126,6 @@ function Terrain(terrain_canvas_id){
 		bounding_box[1] = this.cartesian_to_iso( coords[0]+this.tile_width, coords[1] );
 		bounding_box[2] = this.cartesian_to_iso( coords[0]+this.tile_width, coords[1]+this.tile_width );
 		bounding_box[3] = this.cartesian_to_iso( coords[0], coords[1]+this.tile_width );
-
-		bounding_box[0][0] += tmp_translation_x;
-		bounding_box[0][1] += tmp_translation_y;
-		bounding_box[1][0] += tmp_translation_x;
-		bounding_box[1][1] += tmp_translation_y;
-		bounding_box[2][0] += tmp_translation_x;
-		bounding_box[2][1] += tmp_translation_y;
-		bounding_box[3][0] += tmp_translation_x;
-		bounding_box[3][1] += tmp_translation_y;
 
 		return bounding_box;
 	}
