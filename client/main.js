@@ -16,6 +16,8 @@ var needs_update = true;
 
 var server_url = 'http://localhost:8080';
 
+var tilemap;
+
 $(document).ready(function(){
 
 	$.ajax({
@@ -27,10 +29,8 @@ $(document).ready(function(){
 			if( typeof(ret) !== 'undefined' ){
 				if( typeof(ret.heightmap) !== 'undefined' && ret.heightmap.length ){
 
-					// var heightmap = ret.heightmap;
-					// draw_heightmap(heightmap);
-
-					terrain.draw_tilemap(ret.heightmap);
+					tilemap = ret.heightmap;
+					terrain.draw_tilemap(tilemap);
 
 				}
 			}
@@ -51,26 +51,18 @@ $(document).ready(function(){
 
 	terrain.start_path();
 
-	// setInterval(function(){
-	// 	if(needs_update){
-	// 		terrain.clear_map();
-	// 		terrain.start_path();
-	// 		var i = -9;
-	// 		while(i < 10){
-	// 			terrain.draw_tile(i*50,0);
+	setInterval(function(){
+		if(needs_update){
+			terrain.clear_map();
+			terrain.start_path();
 
-	// 			var i2 = -9;
-	// 			while(i2 < 10){
-	// 				terrain.draw_tile(i*50,i2*50);
-	// 				i2++;
-	// 			}
-	// 			i++;
-	// 		}
-	// 		terrain.fill();
-	// 		terrain.stroke();
-	// 	}
-	// 	needs_update = false;
-	// }, 10);
+			terrain.draw_tilemap(tilemap);
+
+			terrain.fill();
+			terrain.stroke();
+		}
+		needs_update = false;
+	}, 10);
 
 });
 
@@ -105,6 +97,7 @@ function Terrain(terrain_canvas_id, resolution){
 
 	}
 
+	// The old tilemap function for refference
 	// this.draw_tilemap = function(tilemap){
 	// 	var start_x = (-this.tile_width*18);
 	// 	var start_y = (-this.tile_width*18);

@@ -1,0 +1,10 @@
+{
+  "name": "bunker-app",
+  "description": "Le Bunker App",
+  "version": "0.0.1",
+  "dependencies": {
+    "fast-simplex-noise": "~1.0",
+    "express": "~4.12",
+    "body-parser": "1.13"
+  }
+}
