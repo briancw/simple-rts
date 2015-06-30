@@ -258,6 +258,7 @@ function UI(ui_canvas_id){
 			self.last_x = e.pageX;
 			self.last_y = e.pageY;
 			self.mouse_is_down = true;
+			self.clear_ui();
 		});
 
 		$('#'+this.ui_id).mouseup(function(e){
@@ -272,28 +273,29 @@ function UI(ui_canvas_id){
 	this.highlight_tile = function(){
 
 		$('#'+this.ui_id).mousemove(function(e){
-			self.ui_ctx.fillStyle = 'rgba(0,100,0,0.5)';
-			var bounding_box = terrain.get_tile_corners(e.pageX, e.pageY);
-			var iso_coords = terrain.iso_to_cartesian(e.pageX - terrain.translation[0], e.pageY - terrain.translation[1]);
+			if(!self.mouse_is_down){
+				self.ui_ctx.fillStyle = 'rgba(0,100,0,0.5)';
+				var bounding_box = terrain.get_tile_corners(e.pageX, e.pageY);
+				var iso_coords = terrain.iso_to_cartesian(e.pageX - terrain.translation[0], e.pageY - terrain.translation[1]);
 
-			iso_coords[0] = Math.floor(iso_coords[0] / terrain.tile_width);
-			iso_coords[1] = Math.floor(iso_coords[1] / terrain.tile_width);
+				iso_coords[0] = Math.floor(iso_coords[0] / terrain.tile_width);
+				iso_coords[1] = Math.floor(iso_coords[1] / terrain.tile_width);
 
-			self.clear_ui();
-			self.ui_ctx.beginPath();
-			self.ui_ctx.moveTo( bounding_box[0][0], bounding_box[0][1] );
-			self.ui_ctx.lineTo( bounding_box[1][0], bounding_box[1][1] );
-			self.ui_ctx.lineTo( bounding_box[2][0], bounding_box[2][1] );
-			self.ui_ctx.lineTo( bounding_box[3][0], bounding_box[3][1] );
-			self.ui_ctx.closePath();
-			// self.ui_ctx.stroke();
-			self.ui_ctx.fill();
+				self.clear_ui();
+				self.ui_ctx.beginPath();
+				self.ui_ctx.moveTo( bounding_box[0][0], bounding_box[0][1] );
+				self.ui_ctx.lineTo( bounding_box[1][0], bounding_box[1][1] );
+				self.ui_ctx.lineTo( bounding_box[2][0], bounding_box[2][1] );
+				self.ui_ctx.lineTo( bounding_box[3][0], bounding_box[3][1] );
+				self.ui_ctx.closePath();
+				// self.ui_ctx.stroke();
+				self.ui_ctx.fill();
 
-			self.ui_ctx.fillStyle = "#000";
+				self.ui_ctx.fillStyle = "#000";
 
-			var tmp_iso_display = iso_coords[0] + ', ' + iso_coords[1];
-			self.ui_ctx.fillText(tmp_iso_display, bounding_box[0][0] - 6, bounding_box[0][1] + 20);
-
+				var tmp_iso_display = iso_coords[0] + ', ' + iso_coords[1];
+				self.ui_ctx.fillText(tmp_iso_display, bounding_box[0][0] - 6, bounding_box[0][1] + 20);
+			}
 		});
 	}
 }
