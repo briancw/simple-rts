@@ -1,14 +1,13 @@
 var doc_width = $(window).width();
 var doc_height = $(window).height();
-var doc_diagonal = Math.round(Math.sqrt( Math.pow(doc_width,2) + Math.pow(doc_height,2) ));
+var compensated_height = doc_height > doc_width ? Math.ceil(doc_height * 1.15) : doc_height;
+var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(compensated_height,2) ));
 var resolution = 50;
 var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
-console.log(cube_size);
-// var cube_size = 20;
+
 var origin = [5,5];
 
-console.log( cube_size );
 
 var terrain = new Terrain('main', resolution);
 var ui = new UI('ui');
