@@ -13,7 +13,12 @@ var terrain = new Terrain('main', resolution);
 var ui = new UI('ui');
 var needs_update = true;
 
-var server_url = 'http://localhost:8080';
+var current_env = window.location.host;
+if(current_env == 'simple-rts.zimmerloe.com'){
+	var server_url = 'http://simple-rts.zimmerloe.com:9001';
+} else {
+	var server_url = 'http://localhost:9001';
+}
 
 var tilemap;
 
