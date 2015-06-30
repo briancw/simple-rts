@@ -10,7 +10,7 @@ var origin = [5,5];
 
 var terrain = new Terrain('main', resolution);
 var ui = new UI('ui');
-var needs_update = true;
+var needs_update = false;
 
 var current_env = window.location.host;
 if(current_env == 'simple-rts.zimmerloe.com'){
@@ -35,8 +35,15 @@ $(document).ready(function(){
 					tilemap = ret.heightmap;
 					terrain.draw_tilemap(tilemap);
 
+				} else {
+					console.log( 'Unable to get Tilemap' );
+					return false;
 				}
 			}
+		},
+		error: function(ret){
+			console.log( 'Unable to get Tilemap' );
+			return false;
 		}
 	});
 
@@ -56,13 +63,9 @@ $(document).ready(function(){
 
 	setInterval(function(){
 		if(needs_update){
-			terrain.clear_map();
-			terrain.start_path();
 
 			terrain.draw_tilemap(tilemap);
 
-			terrain.fill();
-			terrain.stroke();
 		}
 		needs_update = false;
 	}, 10);
@@ -88,6 +91,10 @@ function Terrain(terrain_canvas_id, resolution){
 		var end_x = (cube_size * 0.5) * this.tile_width;
 		var end_y = (cube_size * 0.5) * this.tile_width;
 
+		this.clear_map();
+		this.start_path();
+
+
 		for(var ix = start_x; ix < end_x; ix += this.tile_width){
 			for(var iy = start_y; iy < end_y; iy += this.tile_width){
 
@@ -96,8 +103,8 @@ function Terrain(terrain_canvas_id, resolution){
 			}
 		}
 
-		this.terrain_ctx.fill();
-
+		this.fill();
+		this.stroke();
 	}
 
 	// The old tilemap function for refference
@@ -162,6 +169,13 @@ function Terrain(terrain_canvas_id, resolution){
 	}
 
 	this.draw_tile = function(x, y){
+
+		// Dont draw tiles outside of the screen
+		var start_coords = this.cartesian_to_iso(x,y);
+		if(start_coords[0] < -this.tile_width || start_coords[1] < -this.tile_width || start_coords[0] > (doc_width + this.tile_width) || start_coords[1] > doc_height){
+			return false;
+		}
+
 		this.move_to(x, y);
 		this.line_to(x+this.tile_width, y);
 		this.line_to(x+this.tile_width, y+this.tile_width);
