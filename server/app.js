@@ -8,8 +8,8 @@ server.use(bodyParser.json());
 server.use(bodyParser.urlencoded({ extended: true }));
 
 function random(){
-	return Math.random();
-	// return 0.4710536374424983;
+	// return Math.random();
+	return 0.4710536374424983;
 }
 
 var fast_simplex = new FastSimplexNoise({random: random});
@@ -31,6 +31,8 @@ server.get('/', function(req, res){
 });
 
 server.all('/heightmap', function(req, res){
+
+	console.time('generation');
 
 	var heightmap = Array();
 
@@ -72,6 +74,8 @@ server.all('/heightmap', function(req, res){
 	}
 
 	res.send( {heightmap: heightmap} );
+
+	console.timeEnd('generation');
 
 });
 

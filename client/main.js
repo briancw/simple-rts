@@ -2,7 +2,7 @@ var doc_width = $(window).width();
 var doc_height = $(window).height();
 var compensated_height = doc_height > doc_width ? Math.ceil(doc_height * 1.15) : doc_height;
 var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(compensated_height,2) ));
-var resolution = 50;
+var resolution = 40;
 var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
 
@@ -83,77 +83,65 @@ function Terrain(terrain_canvas_id, resolution){
 
 	this.translation = [0,0];
 
+	this.terrain_ctx.fillStyle = 'red';
+
 	this.draw_tilemap = function(tilemap){
+// var start = new Date().getTime();
 		var cube_size = Math.sqrt(tilemap.length);
 
-		var start_x = -(cube_size/2) * this.tile_width;
-		var start_y = -(cube_size/2) * this.tile_width;
-		var end_x = (cube_size * 0.5) * this.tile_width;
-		var end_y = (cube_size * 0.5) * this.tile_width;
+		var start_x = -(cube_size/2);
+		var start_y = -(cube_size/2);
+		var end_x = (cube_size * 0.5);
+		var end_y = (cube_size * 0.5);
 
 		this.clear_map();
 		this.start_path();
 
+		for(var ix = start_x; ix < end_x; ix++ ){
+			for(var iy = start_y; iy < end_y; iy++ ){
 
-		for(var ix = start_x; ix < end_x; ix += this.tile_width){
-			for(var iy = start_y; iy < end_y; iy += this.tile_width){
+				var tmp_x = ix - start_x;
+				var tmp_y = iy - start_y;
 
-				this.draw_tile(ix, iy);
+				var tmp_i = (tmp_x * cube_size) + tmp_y;
+
+				var height = tilemap[tmp_i].height;
+
+				if(height >= 0.8){
+					this.update_fill('#7A8781');
+				} else if(height > 0.7){
+					this.update_fill('#59842A');
+				} else if(height > 0.6){
+					this.update_fill('#4C7124');
+				} else if(height > 0.57){
+					this.update_fill('#326800');
+				} else {
+					this.update_fill('#254e78');
+				}
+
+				this.draw_tile(ix * this.tile_width, iy * this.tile_width);
 
 			}
 		}
 
 		this.fill();
-		this.stroke();
+
+
+		// var end = new Date().getTime();
+		// console.log(end - start);
 	}
 
-	// The old tilemap function for refference
-	// this.draw_tilemap = function(tilemap){
-	// 	var start_x = (-this.tile_width*18);
-	// 	var start_y = (-this.tile_width*18);
-	// 	var cube_size = 36;
-
-	// 	for(var ix = start_x; ix < this.tile_width*18; ix+=this.tile_width){
-	// 		for(var iy = start_y; iy < this.tile_width*18; iy+=this.tile_width){
-
-	// 			// Toss out tiles outside the window
-	// 			if( ((ix + iy) / 2) < -((this.window_height/2)+(this.tile_width*2)) ||
-	// 				((ix + iy) / 2) > ((this.window_height/2)+(this.tile_width*2))  ||
-	// 				(ix - iy) < -((this.window_width/2)+(this.tile_width*2)) ||
-	// 				(ix - iy) > ((this.window_width/2)+(this.tile_width*2))
-	// 			){
-	// 				continue;
-	// 			}
-
-	// 			var tmp_x = ((ix+(this.tile_width*18)) / this.tile_width);
-	// 			var tmp_y = ((iy+(this.tile_width*18)) / this.tile_width);
-	// 			var tmp_i = (tmp_x*cube_size)+tmp_y;
-	// 			var height = heightmap[tmp_i].height;
-
-	// 			if(height > 0.8){
-	// 				this.terrain_ctx.fillStyle = luminance('#7A8781', height - 0.8);
-	// 			} else if(height > 0.7){
-	// 				this.terrain_ctx.fillStyle = luminance('#59842A', height - 0.7);
-	// 			} else if(height > 0.6){
-	// 				this.terrain_ctx.fillStyle = luminance('#4C7124', height - 0.6);
-	// 			} else if(height > 0.57){
-	// 				this.terrain_ctx.fillStyle = luminance('#326800', height - 0.57);
-	// 			} else {
-	// 				this.terrain_ctx.fillStyle = luminance('#254e78', height);
-	// 			}
-
-	// 			this.terrain_ctx.beginPath();
-	// 			this.draw_tile(ix+this.map_offset[0] ,iy+this.map_offset[1] );
-	// 			this.terrain_ctx.fill();
-	// 			// this.terrain_ctx.stroke();
-	// 		}
-	// 	}
-	// }
+	this.update_fill = function(new_fill_style){
+		if(this.terrain_ctx.fillStyle != new_fill_style){
+			this.fill();
+			// this.stroke();
+			this.terrain_ctx.fillStyle = new_fill_style;
+			this.start_path();
+		}
+	}
 
 	this.start_path = function(){
 		this.terrain_ctx.beginPath();
-		this.terrain_ctx.fillStyle = '#4C7124';
-		this.terrain_ctx.strokeStyle = '#fff';
 	}
 
 	this.fill = function(){
