@@ -2,12 +2,14 @@ var doc_width = $(window).width();
 var doc_height = $(window).height();
 var compensated_height = doc_height > doc_width ? Math.ceil(doc_height * 1.15) : doc_height;
 var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(compensated_height,2) ));
+
 var url_resolution = location.search.split('resolution=')[1];
 var resolution = (url_resolution) ? parseInt(url_resolution,10) : 50;
+
 var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
-
-var origin = [5,5];
+cube_size = 50;
+var origin = [5,0];
 
 var terrain = new Terrain('main', resolution);
 var ui = new UI('ui');
@@ -27,7 +29,10 @@ $(document).ready(function(){
 	$.ajax({
 		url: server_url+'/heightmap',
 		type : 'POST',
-		data: {'cube_size': cube_size},
+		data: {
+			'cube_size': cube_size,
+			'origin': origin
+		},
 		dataType: 'JSON',
 		success: function(ret){
 			if( typeof(ret) !== 'undefined' ){
@@ -307,7 +312,9 @@ function UI(ui_canvas_id){
 
 				self.ui_ctx.fillStyle = "#000";
 
-				var tmp_iso_display = iso_coords[0] + ', ' + iso_coords[1];
+				var true_coords = [(iso_coords[0] + origin[0] + (cube_size/2)), (iso_coords[1] + origin[1] + (cube_size/2))];
+
+				var tmp_iso_display = true_coords[0] + ', ' + true_coords[1];
 				self.ui_ctx.fillText(tmp_iso_display, bounding_box[0][0] - 6, bounding_box[0][1] + 20);
 			}
 		});

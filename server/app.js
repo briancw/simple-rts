@@ -42,20 +42,32 @@ server.all('/heightmap', function(req, res){
 		var cube_size = 10;
 	}
 
+	if( typeof(req.body.origin) != 'undefined' && req.body.origin.length ){
+		var origin = req.body.origin;
+	} else {
+		var origin = [0,0];
+	}
+
 	if(cube_size > 800){
 		return false;
 	}
 
-	var start_x = 0;
-	var start_y = 0;
-	var scale = 1;
+	var start_x = parseInt(origin[0],10);
+	var start_y = parseInt(origin[1],10);
 
-	for(x = start_x; x < (cube_size) + start_x; x++){
-		for(y = start_y; y < (cube_size) + start_y; y++){
-			nx = Math.cos( ((x/cube_size)*scale) * 2 * Math.PI);
-			ny = Math.cos( ((y/cube_size)*scale) * 2 * Math.PI);
-			nz = Math.sin( ((x/cube_size)*scale) * 2 * Math.PI);
-			nw = Math.sin( ((y/cube_size)*scale) * 2 * Math.PI);
+	var map_size = 100;
+	// Map size must be set statically if all players are to see the same scale regardless of screen resolution
+	// Using this system, adding to x or y will pan the map 1 tile, no matter how many tiles the player sees.
+
+	var scale = cube_size / map_size;
+
+	for(x = start_x; x < cube_size + start_x; x++){
+		for(y = start_y; y < cube_size + start_y; y++){
+
+			nx = Math.cos( ((x/cube_size) * scale) * 2 * Math.PI );
+			ny = Math.cos( ((y/cube_size) * scale) * 2 * Math.PI );
+			nz = Math.sin( ((x/cube_size) * scale) * 2 * Math.PI );
+			nw = Math.sin( ((y/cube_size) * scale) * 2 * Math.PI );
 
 			// heightmap.push( {height: (fast_simplex.get4DNoise(nx,ny,nz,nw) + 1)/2});
 			// var tmp_temp = Math.abs( Math.abs( 1 - ((y-start_y)/cube_size*2) ) - 1 );
