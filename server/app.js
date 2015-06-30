@@ -75,6 +75,4 @@ server.all('/heightmap', function(req, res){
 
 });
 
-server.listen(9001);
-
-
+server.listen(9005);

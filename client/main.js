@@ -8,16 +8,15 @@ cube_size %2 == 0 ? cube_size : cube_size++;
 
 var origin = [5,5];
 
-
 var terrain = new Terrain('main', resolution);
 var ui = new UI('ui');
 var needs_update = true;
 
 var current_env = window.location.host;
 if(current_env == 'simple-rts.zimmerloe.com'){
-	var server_url = 'http://simple-rts.zimmerloe.com:9001';
+	var server_url = 'http://simple-rts.zimmerloe.com:9005';
 } else {
-	var server_url = 'http://localhost:9001';
+	var server_url = 'http://localhost:9005';
 }
 
 var tilemap;
