@@ -6,10 +6,17 @@ var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(compens
 var url_resolution = location.search.split('resolution=')[1];
 var resolution = (url_resolution) ? parseInt(url_resolution,10) : 50;
 
+var url_map_size = location.search.split('map_size=')[1];
+var map_size = (url_map_size) ? parseInt(url_map_size,10) : 100;
+
 var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
-// cube_size = 50;
-var origin = [0,0];
+cube_size = 50;
+
+var tmp_adj = (map_size / cube_size) * 12.5;
+console.log(tmp_adj);
+
+var origin = [0,tmp_adj];
 
 var terrain = new Terrain('main', resolution);
 var ui = new UI('ui');
@@ -33,7 +40,8 @@ $(document).ready(function(){
 			type : 'POST',
 			data: {
 				'cube_size': cube_size,
-				'origin': origin
+				'origin': origin,
+				'map_size': map_size
 			},
 			dataType: 'JSON',
 			success: function(ret){

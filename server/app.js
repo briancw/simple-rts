@@ -27,7 +27,7 @@ server.all('*', function(req, res, next) {
 });
 
 server.get('/', function(req, res){
-	res.send( 'Server seems find 😃' );
+	res.send( 'Server seems fine 😃' );
 });
 
 server.all('/heightmap', function(req, res){
@@ -40,6 +40,12 @@ server.all('/heightmap', function(req, res){
 		var cube_size = parseInt(req.body.cube_size);
 	} else {
 		var cube_size = 10;
+	}
+
+	if( typeof(req.body.map_size) != 'undefined' && req.body.map_size.length ){
+		var map_size = parseInt(req.body.map_size);
+	} else {
+		var map_size = 100;
 	}
 
 	if( typeof(req.body.origin) != 'undefined' && req.body.origin.length ){
@@ -55,7 +61,8 @@ server.all('/heightmap', function(req, res){
 	var start_x = parseInt(origin[0],10);
 	var start_y = parseInt(origin[1],10);
 
-	var map_size = 100;
+	// var map_size = 1000;
+	// var map_size = 25000;
 	// Map size must be set statically if all players are to see the same scale regardless of screen resolution
 	// Using this system, adding to x or y will pan the map 1 tile, no matter how many tiles the player sees.
 
