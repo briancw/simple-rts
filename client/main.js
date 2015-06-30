@@ -2,7 +2,8 @@ var doc_width = $(window).width();
 var doc_height = $(window).height();
 var compensated_height = doc_height > doc_width ? Math.ceil(doc_height * 1.15) : doc_height;
 var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(compensated_height,2) ));
-var resolution = 40;
+var url_resolution = location.search.split('resolution=')[1];
+var resolution = (url_resolution) ? parseInt(url_resolution,10) : 50;
 var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
 
@@ -97,6 +98,8 @@ function Terrain(terrain_canvas_id, resolution){
 		this.clear_map();
 		this.start_path();
 
+		this.terrain_ctx.lineWidth = 0;
+
 		for(var ix = start_x; ix < end_x; ix++ ){
 			for(var iy = start_y; iy < end_y; iy++ ){
 
@@ -127,6 +130,18 @@ function Terrain(terrain_canvas_id, resolution){
 		this.fill();
 
 
+		// this.start_path();
+		// this.terrain_ctx.strokeStyle = '#fff';
+		// this.terrain_ctx.lineWidth = 3;
+		// for(var ix = start_x; ix < end_x; ix++ ){
+		// 	for(var iy = start_y; iy < end_y; iy++ ){
+		// 		this.draw_tile(ix * this.tile_width, iy * this.tile_width);
+		// 	}
+		// }
+		// this.stroke();
+
+
+
 		// var end = new Date().getTime();
 		// console.log(end - start);
 	}
@@ -134,7 +149,6 @@ function Terrain(terrain_canvas_id, resolution){
 	this.update_fill = function(new_fill_style){
 		if(this.terrain_ctx.fillStyle != new_fill_style){
 			this.fill();
-			// this.stroke();
 			this.terrain_ctx.fillStyle = new_fill_style;
 			this.start_path();
 		}
