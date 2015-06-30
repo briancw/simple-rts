@@ -8,8 +8,8 @@ var resolution = (url_resolution) ? parseInt(url_resolution,10) : 50;
 
 var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
-cube_size = 50;
-var origin = [5,0];
+// cube_size = 50;
+var origin = [0,0];
 
 var terrain = new Terrain('main', resolution);
 var ui = new UI('ui');
@@ -26,32 +26,35 @@ var tilemap;
 
 $(document).ready(function(){
 
-	$.ajax({
-		url: server_url+'/heightmap',
-		type : 'POST',
-		data: {
-			'cube_size': cube_size,
-			'origin': origin
-		},
-		dataType: 'JSON',
-		success: function(ret){
-			if( typeof(ret) !== 'undefined' ){
-				if( typeof(ret.heightmap) !== 'undefined' && ret.heightmap.length ){
 
-					tilemap = ret.heightmap;
-					terrain.draw_tilemap(tilemap);
+	function get_map_data(){
+		$.ajax({
+			url: server_url+'/heightmap',
+			type : 'POST',
+			data: {
+				'cube_size': cube_size,
+				'origin': origin
+			},
+			dataType: 'JSON',
+			success: function(ret){
+				if( typeof(ret) !== 'undefined' ){
+					if( typeof(ret.heightmap) !== 'undefined' && ret.heightmap.length ){
 
-				} else {
-					console.log( 'Unable to get Tilemap' );
-					return false;
+						tilemap = ret.heightmap;
+						terrain.draw_tilemap(tilemap);
+
+					} else {
+						console.log( 'Unable to get Tilemap' );
+						return false;
+					}
 				}
+			},
+			error: function(ret){
+				console.log( 'Unable to get Tilemap' );
+				return false;
 			}
-		},
-		error: function(ret){
-			console.log( 'Unable to get Tilemap' );
-			return false;
-		}
-	});
+		});
+	}
 
 
 	$('.canvas').each(function(){
@@ -59,13 +62,37 @@ $(document).ready(function(){
 		$(this).attr('height', doc_height);
 	});
 
-	var main_ctx = $('#main')[0].getContext('2d');
+	get_map_data();
 
 	ui.click_listener();
 	ui.pan_listener();
 	ui.highlight_tile();
 
 	terrain.start_path();
+
+	$(document).keydown(function(e){
+		var do_update = false;
+
+		// var pan_amount = 15;
+		if(e.keyCode == 87){ // Up
+			origin[1]--;
+			do_update = true;
+		} else if(e.keyCode == 83){ // Down
+			origin[1]++;
+			do_update = true;
+		} else if(e.keyCode == 65){ // Left
+			origin[0]--;
+			do_update = true;
+		} else if(e.keyCode == 68){ // Right
+			origin[0]++;
+			do_update = true;
+		}
+
+		if(do_update){
+			get_map_data();
+		}
+
+	});
 
 	setInterval(function(){
 		if(needs_update){
