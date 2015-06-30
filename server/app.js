@@ -42,6 +42,10 @@ server.all('/heightmap', function(req, res){
 		var cube_size = 10;
 	}
 
+	if(cube_size > 800){
+		return false;
+	}
+
 	var start_x = 0;
 	var start_y = 0;
 	var scale = 1;
