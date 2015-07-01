@@ -11,10 +11,10 @@ var map_size = (url_map_size) ? parseInt(url_map_size,10) : 100;
 
 var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
-cube_size = 50;
+// cube_size = 30;
 
 var tmp_adj = (map_size / cube_size) * 12.5;
-console.log(tmp_adj);
+// console.log(tmp_adj);
 
 var origin = [0,tmp_adj];
 
@@ -24,44 +24,53 @@ var needs_update = false;
 
 var current_env = window.location.host;
 if(current_env == 'simple-rts.zimmerloe.com'){
-	var server_url = 'http://simple-rts.zimmerloe.com:9005';
+	var server_url = 'ws://simple-rts.zimmerloe.com:9005';
 } else {
-	var server_url = 'http://localhost:9005';
+	var server_url = 'ws://localhost:9005';
 }
 
 var tilemap;
 
 $(document).ready(function(){
 
+	if (!"WebSocket" in window){
+		alert("Browser doesn't support WebSockets. Go kick rocks.");
+	}
+
+	var ws = new WebSocket(server_url);
+
+	ws.onopen = function(){
+		// console.log('connected');
+		get_map_data();
+	};
+
+	ws.onmessage = function (ret){
+		var received_msg = JSON.parse(ret.data);
+		var message_type = received_msg.type;
+
+		switch (message_type){
+
+			case 'tilemap':
+				tilemap = received_msg.tilemap;
+				terrain.draw_tilemap(tilemap);
+
+				break;
+
+			default:
+				console.log('Unkown server response');
+				break;
+
+		}
+	};
+
+	ws.onclose = function(){
+		console.log( 'WebSocket Connection closed');
+	};
+
 
 	function get_map_data(){
-		$.ajax({
-			url: server_url+'/heightmap',
-			type : 'POST',
-			data: {
-				'cube_size': cube_size,
-				'origin': origin,
-				'map_size': map_size
-			},
-			dataType: 'JSON',
-			success: function(ret){
-				if( typeof(ret) !== 'undefined' ){
-					if( typeof(ret.heightmap) !== 'undefined' && ret.heightmap.length ){
-
-						tilemap = ret.heightmap;
-						terrain.draw_tilemap(tilemap);
-
-					} else {
-						console.log( 'Unable to get Tilemap' );
-						return false;
-					}
-				}
-			},
-			error: function(ret){
-				console.log( 'Unable to get Tilemap' );
-				return false;
-			}
-		});
+		var map_params = {cube_size: cube_size, map_size: map_size, resolution: resolution, origin: origin};
+		ws.send( JSON.stringify({type:'get_map_data', map_params:map_params }) );
 	}
 
 
@@ -70,7 +79,6 @@ $(document).ready(function(){
 		$(this).attr('height', doc_height);
 	});
 
-	get_map_data();
 
 	ui.click_listener();
 	ui.pan_listener();
@@ -211,7 +219,6 @@ function Terrain(terrain_canvas_id, resolution){
 	}
 
 	this.draw_tile = function(x, y){
-
 		// Dont draw tiles outside of the screen
 		var start_coords = this.cartesian_to_iso(x,y);
 		if(start_coords[0] < -this.tile_width || start_coords[1] < -this.tile_width || start_coords[0] > (doc_width + this.tile_width) || start_coords[1] > doc_height){
