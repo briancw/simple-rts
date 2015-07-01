@@ -11,9 +11,9 @@ var map_size = (url_map_size) ? parseInt(url_map_size,10) : 100;
 
 var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
-// cube_size = 30;
+// cube_size = 50;
 
-var tmp_adj = (map_size / cube_size) * 12.5;
+var tmp_adj = (map_size / cube_size) * 12.66;
 // console.log(tmp_adj);
 
 var origin = [0,tmp_adj];
@@ -106,6 +106,16 @@ $(document).ready(function(){
 			do_update = true;
 		} else if(e.keyCode == 68){ // Right
 			origin[0]++;
+			do_update = true;
+		} else if(e.keyCode == 187){ // Plus
+			map_size *= 1.1;
+			tmp_adj = (map_size / cube_size) * 12.66;
+			origin = [0,tmp_adj];
+			do_update = true;
+		} else if(e.keyCode == 189){ // Minus
+			map_size *= 0.9;
+			tmp_adj = (map_size / cube_size) * 12.66;
+			origin = [0,tmp_adj];
 			do_update = true;
 		}
 
