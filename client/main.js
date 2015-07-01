@@ -22,22 +22,27 @@ var terrain = new Terrain('main', resolution);
 var ui = new UI('ui');
 var needs_update = false;
 
+var tilemap;
+
+// Setup Networking
+if (!"WebSocket" in window){
+	alert("Browser doesn't support WebSockets. Go kick rocks.");
+}
+
 var current_env = window.location.host;
 if(current_env == 'simple-rts.zimmerloe.com'){
 	var server_url = 'ws://simple-rts.zimmerloe.com:9005';
 } else {
 	var server_url = 'ws://localhost:9005';
 }
+var ws = new WebSocket(server_url);
 
-var tilemap;
+
+function make_building(){
+	ws.send( get_json({type:'save_thing_at_location', coords:[5,5,map_size]}) )
+}
 
 $(document).ready(function(){
-
-	if (!"WebSocket" in window){
-		alert("Browser doesn't support WebSockets. Go kick rocks.");
-	}
-
-	var ws = new WebSocket(server_url);
 
 	ws.onopen = function(){
 		// console.log('connected');
@@ -70,7 +75,7 @@ $(document).ready(function(){
 
 	function get_map_data(){
 		var map_params = {cube_size: cube_size, map_size: map_size, resolution: resolution, origin: origin};
-		ws.send( JSON.stringify({type:'get_map_data', map_params:map_params }) );
+		ws.send( get_json({type:'get_map_data', map_params:map_params}) );
 	}
 
 
@@ -120,6 +125,19 @@ $(document).ready(function(){
 	}, 10);
 
 });
+
+function get_json(input){
+	try {
+		var json_string = JSON.stringify(input);
+	} catch(err) {
+		console.log('Invalid Json');
+		console.log(err);
+		return false;
+	}
+
+	return json_string;
+}
+
 
 function Terrain(terrain_canvas_id, resolution){
 

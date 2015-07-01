@@ -4,6 +4,10 @@ var fast_simplex = new FastSimplexNoise({random: random});
 var WebSocketServer = require('ws').Server;
 var wss = new WebSocketServer({ port: 9005 });
 
+var Redis = require('redis');
+var redis = Redis.createClient();
+redis.select(1);
+
 function random(){
 	// return Math.random();
 	return 0.4710536374424983;
@@ -14,7 +18,6 @@ fast_simplex.octaves = 12;
 fast_simplex.frequency = 0.315;
 fast_simplex.persistence = 0.5;
 
-
 wss.on('connection', function connection(ws) {
 
 	ws.on('message', function incoming(message) {
@@ -23,7 +26,7 @@ wss.on('connection', function connection(ws) {
 			var parsed_message = JSON.parse(message);
 			var message_type = parsed_message.type;
 		} catch(err) {
-			console.log('Unkown client request');
+			console.log('Invalid client request json');
 			console.log(err);
 			return false;
 		}
@@ -32,7 +35,17 @@ wss.on('connection', function connection(ws) {
 
 			case 'get_map_data':
 				var tilemap = generate_tilemap(parsed_message.map_params);
-				send_json( ws, {type:'tilemap', tilemap:tilemap} );
+				ws.send( get_json({type:'tilemap', tilemap:tilemap}) );
+				break;
+
+			case 'save_thing_at_location':
+				var tmp_x = parsed_message.coords[0];
+				var tmp_y = parsed_message.coords[1];
+				var map_size = parsed_message.coords[2];
+				var tmp_coord = (tmp_x * map_size) + tmp_y;
+
+				redis.select(3);
+				redis.set( pad(tmp_coord, 8), get_json({building: 'bunker'}) );
 				break;
 
 			default:
@@ -51,21 +64,27 @@ wss.on('connection', function connection(ws) {
 	// ws.send( JSON.stringify( ['clients:'+wss.clients.length] ) );
 });
 
-	function send_json(ws_client, input){
+	function get_json(input){
 		try {
-			var parsed_message = JSON.stringify(input);
+			var json_string = JSON.stringify(input);
 		} catch(err) {
-			console.log('Unkown send request');
+			console.log('Invalid Json');
 			console.log(err);
+			return false;
 		}
 
-		ws_client.send( parsed_message );
+		return json_string;
+	}
+
+	function pad(num, size) {
+		var s = "000000000" + num;
+		return s.substr(s.length-size);
 	}
 
 
 
 	function generate_tilemap(map_params){
-		// console.time('generation');
+		console.time('generation');
 		var tilemap = Array();
 
 		if( typeof(map_params.cube_size) != 'undefined' ){
@@ -123,7 +142,7 @@ wss.on('connection', function connection(ws) {
 			}
 		}
 
-		// console.timeEnd('generation');
+		console.timeEnd('generation');
 		return tilemap;
 	}
 

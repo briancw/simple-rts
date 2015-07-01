@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "dependencies": {
     "fast-simplex-noise": "~1.0",
-    "ws": "~0.7"
+    "ws": "~0.7",
+    "redis": "~0.12"
   }
 }
