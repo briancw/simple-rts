@@ -20,9 +20,9 @@ var origin = [0,tmp_adj];
 
 var terrain = new Terrain('main', resolution);
 var ui = new UI('ui');
-var needs_update = false;
 
 var tilemap;
+var init_socket_connect = false;
 
 // Setup Networking
 if (!"WebSocket" in window){
@@ -37,6 +37,22 @@ if(current_env == 'simple-rts.zimmerloe.com'){
 }
 var ws = new WebSocket(server_url);
 
+ws.onclose = function(){
+	if(!init_socket_connect){
+		visual_error( 'Unable to establish WebSocket connection.');
+	} else {
+		visual_error( 'WebSocket Connection closed');
+	}
+};
+
+ws.onerror = function(e){
+	visual_error('There was an error with the WebSocket connection.');
+}
+
+ws.onopen = function(){
+	init_socket_connect = true;
+	get_map_data();
+};
 
 function make_building(){
 	ws.send( get_json({type:'save_thing_at_location', coords:[5,5,map_size]}) )
@@ -44,10 +60,6 @@ function make_building(){
 
 $(document).ready(function(){
 
-	ws.onopen = function(){
-		// console.log('connected');
-		get_map_data();
-	};
 
 	ws.onmessage = function (ret){
 		var received_msg = JSON.parse(ret.data);
@@ -68,11 +80,6 @@ $(document).ready(function(){
 		}
 	};
 
-	ws.onclose = function(){
-		console.log( 'WebSocket Connection closed');
-	};
-
-
 	function get_map_data(){
 		var map_params = {cube_size: cube_size, map_size: map_size, resolution: resolution, origin: origin};
 		ws.send( get_json({type:'get_map_data', map_params:map_params}) );
@@ -90,6 +97,8 @@ $(document).ready(function(){
 	ui.highlight_tile();
 
 	terrain.start_path();
+
+	terrain.tilemap_update_loop();
 
 	$(document).keydown(function(e){
 		var do_update = false;
@@ -115,15 +124,6 @@ $(document).ready(function(){
 
 	});
 
-	setInterval(function(){
-		if(needs_update){
-
-			terrain.draw_tilemap(tilemap);
-
-		}
-		needs_update = false;
-	}, 10);
-
 });
 
 function get_json(input){
@@ -136,6 +136,15 @@ function get_json(input){
 	}
 
 	return json_string;
+}
+
+function visual_error(error_message){
+	$('.error_message_box .error_message').html(error_message);
+	$('.error_message_box').fadeIn(600);
+
+	setTimeout(function(){
+		$('.error_message_box').fadeOut(500);
+	}, 3000);
 }
 
 
@@ -151,6 +160,8 @@ function Terrain(terrain_canvas_id, resolution){
 	this.translation = [0,0];
 
 	this.terrain_ctx.fillStyle = 'red';
+
+	this.needs_update = false;
 
 	this.draw_tilemap = function(tilemap){
 // var start = new Date().getTime();
@@ -210,6 +221,19 @@ function Terrain(terrain_canvas_id, resolution){
 
 		// var end = new Date().getTime();
 		// console.log(end - start);
+	}
+
+	this.tilemap_update_loop = function(){
+
+		setInterval(function(){
+			if(this.needs_update){
+
+				this.draw_tilemap(tilemap);
+
+			}
+			this.needs_update = false;
+		}, 10);
+
 	}
 
 	this.update_fill = function(new_fill_style){
@@ -327,7 +351,7 @@ function UI(ui_canvas_id){
 
 				self.last_x = e.pageX;
 				self.last_y = e.pageY;
-				needs_update = true;
+
 			}
 		});
 	}
