@@ -5,7 +5,12 @@ var WebSocketServer = require('ws').Server;
 var wss = new WebSocketServer({ port: 9005 });
 
 var Redis = require('redis');
-var redis = Redis.createClient();
+var redis = Redis.createClient(6379, 'localhost');
+
+redis.on("error", function(err) {
+	console.error("Error connecting to redis", err);
+});
+
 redis.select(1);
 
 function random(){

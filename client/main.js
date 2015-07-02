@@ -54,6 +54,11 @@ ws.onopen = function(){
 	get_map_data();
 };
 
+function get_map_data(){
+	var map_params = {cube_size: cube_size, map_size: map_size, resolution: resolution, origin: origin};
+	ws.send( get_json({type:'get_map_data', map_params:map_params}) );
+}
+
 function make_building(){
 	ws.send( get_json({type:'save_thing_at_location', coords:[5,5,map_size]}) )
 }
@@ -79,12 +84,6 @@ $(document).ready(function(){
 
 		}
 	};
-
-	function get_map_data(){
-		var map_params = {cube_size: cube_size, map_size: map_size, resolution: resolution, origin: origin};
-		ws.send( get_json({type:'get_map_data', map_params:map_params}) );
-	}
-
 
 	$('.canvas').each(function(){
 		$(this).attr('width', doc_width);
@@ -234,14 +233,15 @@ function Terrain(terrain_canvas_id, resolution){
 	}
 
 	this.tilemap_update_loop = function(){
+		var self = this;
 
 		setInterval(function(){
-			if(this.needs_update){
+			if(self.needs_update){
 
-				this.draw_tilemap(tilemap);
+				self.draw_tilemap(tilemap);
 
 			}
-			this.needs_update = false;
+			self.needs_update = false;
 		}, 10);
 
 	}
@@ -361,7 +361,7 @@ function UI(ui_canvas_id){
 
 				self.last_x = e.pageX;
 				self.last_y = e.pageY;
-
+				terrain.needs_update = true;
 			}
 		});
 	}
