@@ -74,7 +74,6 @@ $(document).ready(function(){
 			case 'tilemap':
 				tilemap = received_msg.tilemap;
 				terrain.draw_tilemap(tilemap);
-
 				break;
 
 			default:
@@ -227,7 +226,7 @@ function Terrain(terrain_canvas_id, resolution){
 
 			current_height++;
 		}
-
+// this.clear_map();
 	}
 
 	this.draw_tile = function(x, y){
@@ -274,15 +273,10 @@ function Terrain(terrain_canvas_id, resolution){
 	}
 
 	this.clear_map = function(){
-		this.terrain_ctx.restore();
-
-		// this.terrain_ctx.rect( 0, 0, doc_width, doc_height- );
-		this.terrain_ctx.clearRect( 0, 0, doc_width, doc_height );
 		this.terrain_ctx.save();
-
-		this.terrain_ctx.translate(doc_width/2, doc_height/2)
-		this.terrain_ctx.scale(1, 0.5);
-		this.terrain_ctx.rotate(this.rot_radians);
+		this.terrain_ctx.setTransform(1, 0, 0, 1, 0, 0);
+		this.terrain_ctx.clearRect(0, 0, doc_width, doc_height);
+		this.terrain_ctx.restore();
 	}
 
 }
@@ -337,20 +331,14 @@ function UI(ui_canvas_id){
 	}
 
 	this.clear_ui = function(){
-		var tmp_fill_style = this.ui_ctx.fillStyle;
-		this.ui_ctx.restore();
-
-		this.ui_ctx.clearRect( 0, 0, doc_width, doc_height );
 		this.ui_ctx.save();
-
-		this.ui_ctx.translate(doc_width/2, doc_height/2)
-		this.ui_ctx.scale(1, 0.5);
-		this.ui_ctx.rotate(this.rot_radians);
-		this.ui_ctx.fillStyle = tmp_fill_style;
+		this.ui_ctx.setTransform(1, 0, 0, 1, 0, 0);
+		this.ui_ctx.clearRect(0, 0, doc_width, doc_height);
+		this.ui_ctx.restore();
 	}
 
 	this.highlight_tile = function(){
-		// self.ui_ctx.fillStyle = 'rgba(0,100,0,0.5)';
+		self.ui_ctx.fillStyle = 'rgba(200,0,0,0.5)';
 		// self.ui_ctx.fillStyle = 'red';
 
 		$('#'+this.ui_id).mousemove(function(e){
@@ -358,23 +346,15 @@ function UI(ui_canvas_id){
 
 				self.clear_ui();
 
-				var iso_coords = self.iso_to_cartesian( [e.pageX, e.pageY], true );
+				var iso_coords = self.iso_to_cartesian( [e.pageX, e.pageY] );
 
+				iso_coords[0] = Math.floor( (iso_coords[0] - terrain.translation[0]) / terrain.tile_width) * terrain.tile_width;
+				iso_coords[1] = Math.floor( (iso_coords[1] - terrain.translation[1]) / terrain.tile_width) * terrain.tile_width;
 
-				iso_coords[0] = Math.floor(iso_coords[0] / terrain.tile_width) * terrain.tile_width;
-				iso_coords[1] = Math.floor(iso_coords[1] / terrain.tile_width) * terrain.tile_width;
-
-				iso_coords[0] += (terrain.translation[0] % terrain.tile_width);
-				iso_coords[1] += (terrain.translation[1] % terrain.tile_width);
-// console.log( terrain.translation[0] % terrain.tile_width );
-				// var tmp_translation = Array();
-				// tmp_translation[0] = terrain.translation[0] % terrain.tile_width;
-				// tmp_translation[1] = terrain.translation[1] % terrain.tile_width;
-
-				self.ui_ctx.fillStyle = 'rgba(0,100,0,0.5)';
+				// self.ui_ctx.fillStyle = 'rgba(0,100,0,0.5)';
 				self.ui_ctx.beginPath();
-				// self.ui_ctx.rect( iso_coords[0] + tmp_translation[0], iso_coords[1] + tmp_translation[1], terrain.tile_width - terrain.tile_spacer, terrain.tile_width - terrain.tile_spacer);
-				self.ui_ctx.rect( iso_coords[0], iso_coords[1], terrain.tile_width - terrain.tile_spacer, terrain.tile_width - terrain.tile_spacer);
+
+				self.ui_ctx.rect( iso_coords[0] + terrain.translation[0], iso_coords[1] + terrain.translation[1], terrain.tile_width - terrain.tile_spacer, terrain.tile_width - terrain.tile_spacer);
 				self.ui_ctx.fill();
 
 				var true_coords = Array();
@@ -382,14 +362,12 @@ function UI(ui_canvas_id){
 				true_coords[1] = (iso_coords[1]/terrain.tile_width) + (cube_size/2) + origin[1];
 
 				// console.log( true_coords );
-				// console.log( origin );
-
 			}
 		});
 
 	}
 
-	this.iso_to_cartesian = function(coords, use_translation){
+	this.iso_to_cartesian = function(coords){
 		var angle = -45 * Math.PI / 180;
 		var x = coords[0] - (doc_width/2);
 		var y = (coords[1] - (doc_height/2)) * 2;
@@ -400,29 +378,7 @@ function UI(ui_canvas_id){
 		var new_x = x*cos - y*sin; // + obj.left;
 		var new_y = x*sin + y*cos; // + obj.top;
 
-		// if(use_translation){
-		// 	new_x += terrain.translation[0];
-		// 	new_y += terrain.translation[1];
-		// }
 		return [Math.round(new_x), Math.round(new_y)];
 	}
 
-	// this.cartesian_to_iso = function(input_x, input_y){
-	// 	var pt_x = (input_x - input_y);
-	// 	var pt_y = ((input_x + input_y) / 2);
-
-	// 	pt_x += (this.window_width/2);
-	// 	pt_y += (this.window_height/2);
-	// 	return( [pt_x, pt_y] );
-	// }
-
-	// this.iso_to_cartesian = function(input_x, input_y){
-	// 	input_x -= this.window_width/2;
-	// 	input_y -= this.window_height/2;
-	// 	// var cart_x = (2 * input_y + input_x) / 2;
-	// 	// var cart_y = (2 * input_y - input_x) / 2;
-	// 	var cart_x = (2 * input_y + input_x) / 2;
-	// 	var cart_y = (2 * input_y - input_x) / 2;
-	// 	return( [cart_x, cart_y] );
-	// }
 }
