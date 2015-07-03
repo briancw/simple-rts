@@ -171,7 +171,7 @@ function Terrain(terrain_canvas_id, resolution){
 	this.rot_radians = 45*Math.PI/180;
 
 	this.tile_width = resolution;
-	this.tile_spacer = 1;
+	this.tile_spacer = 0.5;
 
 	this.translation = [0,0];
 
@@ -358,12 +358,22 @@ function UI(ui_canvas_id){
 
 				self.clear_ui();
 
-				var iso_coords = self.iso_to_cartesian( [e.pageX, e.pageY] );
+				var iso_coords = self.iso_to_cartesian( [e.pageX, e.pageY], true );
+
+
 				iso_coords[0] = Math.floor(iso_coords[0] / terrain.tile_width) * terrain.tile_width;
 				iso_coords[1] = Math.floor(iso_coords[1] / terrain.tile_width) * terrain.tile_width;
 
+				iso_coords[0] += (terrain.translation[0] % terrain.tile_width);
+				iso_coords[1] += (terrain.translation[1] % terrain.tile_width);
+// console.log( terrain.translation[0] % terrain.tile_width );
+				// var tmp_translation = Array();
+				// tmp_translation[0] = terrain.translation[0] % terrain.tile_width;
+				// tmp_translation[1] = terrain.translation[1] % terrain.tile_width;
+
 				self.ui_ctx.fillStyle = 'rgba(0,100,0,0.5)';
 				self.ui_ctx.beginPath();
+				// self.ui_ctx.rect( iso_coords[0] + tmp_translation[0], iso_coords[1] + tmp_translation[1], terrain.tile_width - terrain.tile_spacer, terrain.tile_width - terrain.tile_spacer);
 				self.ui_ctx.rect( iso_coords[0], iso_coords[1], terrain.tile_width - terrain.tile_spacer, terrain.tile_width - terrain.tile_spacer);
 				self.ui_ctx.fill();
 
@@ -379,16 +389,21 @@ function UI(ui_canvas_id){
 
 	}
 
-	this.iso_to_cartesian = function(coords){
+	this.iso_to_cartesian = function(coords, use_translation){
 		var angle = -45 * Math.PI / 180;
 		var x = coords[0] - (doc_width/2);
 		var y = (coords[1] - (doc_height/2)) * 2;
+
 		var cos = Math.cos(angle);
 		var sin = Math.sin(angle);
 
 		var new_x = x*cos - y*sin; // + obj.left;
 		var new_y = x*sin + y*cos; // + obj.top;
 
+		// if(use_translation){
+		// 	new_x += terrain.translation[0];
+		// 	new_y += terrain.translation[1];
+		// }
 		return [Math.round(new_x), Math.round(new_y)];
 	}
 
