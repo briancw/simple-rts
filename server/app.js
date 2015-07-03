@@ -23,6 +23,8 @@ fast_simplex.octaves = 12;
 fast_simplex.frequency = 0.315;
 fast_simplex.persistence = 0.5;
 
+var map_size = 100;
+
 wss.on('connection', function connection(ws) {
 
 	ws.on('message', function incoming(message) {
@@ -43,14 +45,29 @@ wss.on('connection', function connection(ws) {
 				ws.send( get_json({type:'tilemap', tilemap:tilemap}) );
 				break;
 
+			case 'get_building_data':
+				get_buildings( parsed_message.params, function(ret){
+
+					ws.send( get_json( {type:'building_data', building_map: ret} ) );
+
+				});
+				break;
+
+			case 'clear_building_data':
+				redis.select(3);
+				redis.flushdb();
+				break;
+
 			case 'save_thing_at_location':
 				var tmp_x = parsed_message.coords[0];
 				var tmp_y = parsed_message.coords[1];
-				var map_size = parsed_message.coords[2];
+
 				var tmp_coord = (tmp_x * map_size) + tmp_y;
+				tmp_coord = pad( tmp_coord, 13 );
 
 				redis.select(3);
-				redis.set( pad(tmp_coord, 8), get_json({building: 'bunker'}) );
+				redis.set( tmp_coord, get_json({building: 'bunker'}) );
+
 				break;
 
 			default:
@@ -59,7 +76,7 @@ wss.on('connection', function connection(ws) {
 
 		}
 
-		console.log('received: %s', message);
+		// console.log('received: %s', message);
 
 	});
 
@@ -82,7 +99,7 @@ wss.on('connection', function connection(ws) {
 	}
 
 	function pad(num, size) {
-		var s = "000000000" + num;
+		var s = "0000000000000" + num;
 		return s.substr(s.length-size);
 	}
 
@@ -99,9 +116,9 @@ wss.on('connection', function connection(ws) {
 		}
 
 		if( typeof(map_params.map_size) != 'undefined' ){
-			var map_size = parseInt(map_params.map_size);
+			map_size = parseInt(map_params.map_size);
 		} else {
-			var map_size = 100;
+			map_size = 100;
 		}
 
 		if( typeof(map_params.origin) != 'undefined' && map_params.origin.length ){
@@ -149,5 +166,32 @@ wss.on('connection', function connection(ws) {
 
 		console.timeEnd('generation');
 		return tilemap;
+	}
+
+	function get_buildings(params, callback){
+
+		// console.log(params);
+		var tmp_origin = params.origin;
+
+		var first_index = (tmp_origin[0] * map_size) + tmp_origin[1];
+		var cube_size = params.cube_size;
+
+		var range = [];
+		var buildings;
+
+		redis.select(3);
+
+		for(var i = first_index; i < first_index + (cube_size*map_size); i += map_size ){
+			for(var i2 = i; i2 < i + cube_size; i2++){
+				range.push(i2);
+			}
+		}
+
+		redis.mget(range, function(err, results){
+			buildings = results;
+
+			callback(buildings);
+		});
+
 	}
 

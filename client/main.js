@@ -11,10 +11,12 @@ var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
 // cube_size = 150;
 
-var tmp_adj = (map_size / cube_size) * 12.66;
-var origin = [0,tmp_adj];
+var origin = [0,0];
+origin = [552648, 429251];
+map_size = 2500000;
 
 var terrain = new Terrain('main', resolution);
+var building = new Building('buildings');
 var ui = new UI('ui');
 
 var tilemap;
@@ -49,6 +51,7 @@ ws.onerror = function(e){
 ws.onopen = function(){
 	init_socket_connect = true;
 	get_map_data();
+	get_building_data();
 };
 
 function get_map_data(){
@@ -56,8 +59,9 @@ function get_map_data(){
 	ws.send( get_json({type:'get_map_data', map_params:map_params}) );
 }
 
-function make_building(){
-	ws.send( get_json({type:'save_thing_at_location', coords:[5,5,map_size]}) )
+function get_building_data(){
+	var building_params = {origin: origin, cube_size: cube_size};
+	ws.send( get_json( {type:'get_building_data', params: building_params } ) );
 }
 
 $(document).ready(function(){
@@ -71,6 +75,11 @@ $(document).ready(function(){
 			case 'tilemap':
 				tilemap = received_msg.tilemap;
 				terrain.draw_tilemap(tilemap);
+				break;
+
+			case 'building_data':
+				building.building_map = received_msg.building_map;
+				building.draw_buildings();
 				break;
 
 			default:
@@ -120,13 +129,11 @@ $(document).ready(function(){
 			do_update = true;
 		} else if(e.keyCode == 187){ // Plus
 			map_size *= 1.1;
-			tmp_adj = (map_size / cube_size) * 12.66;
-			origin = [0,tmp_adj];
+			origin = [Math.round((origin[0]*1.1) + (3)), Math.round((origin[1]*1.1) + (3)) ];
 			do_update = true;
 		} else if(e.keyCode == 189){ // Minus
 			map_size *= 0.9;
-			tmp_adj = (map_size / cube_size) * 12.66;
-			origin = [0,tmp_adj];
+			origin = [(origin[0]*0.9) - (3), (origin[1]*0.9) - (3) ];
 			do_update = true;
 		}
 
@@ -164,12 +171,9 @@ function Terrain(terrain_canvas_id, resolution){
 
 	this.terrain_canvas = document.getElementById(terrain_canvas_id);
 	this.terrain_ctx = this.terrain_canvas.getContext('2d');
-	this.rot_radians = 45*Math.PI/180;
 
 	this.tile_width = resolution;
 	this.tile_spacer = 0.5;
-
-	this.translation = [0,0];
 
 	this.terrain_ctx.fillStyle = 'red';
 
@@ -177,6 +181,16 @@ function Terrain(terrain_canvas_id, resolution){
 
 	this.draw_tilemap = function(tilemap){
 		var cube_size = Math.sqrt(tilemap.length);
+
+		// Off Screen canvas test
+		// var tmp_canvas = document.createElement('canvas');
+		// tmp_canvas.width = doc_width;
+		// tmp_canvas.height = doc_height;
+		// var tmp_ctx = tmp_canvas.getContext('2d');
+
+		// tmp_ctx.fillRect(10, 10, 100, 100);
+		// this.terrain_ctx.drawImage( tmp_canvas, 0, 0 );
+		// return false;
 
 		var start_x = -(cube_size/2);
 		var start_y = -(cube_size/2);
@@ -223,11 +237,13 @@ function Terrain(terrain_canvas_id, resolution){
 
 			current_height++;
 		}
+
+		building.draw_buildings();
 	}
 
 	this.draw_tile = function(x, y){
-		x += this.translation[0];
-		y += this.translation[1];
+		x += ui.translation[0];
+		y += ui.translation[1];
 		this.terrain_ctx.rect(x, y, this.tile_width - this.tile_spacer, this.tile_width - this.tile_spacer);
 	}
 
@@ -235,11 +251,6 @@ function Terrain(terrain_canvas_id, resolution){
 		if(this.terrain_ctx.fillStyle != new_fill_style){
 			this.terrain_ctx.fillStyle = new_fill_style;
 		}
-	}
-
-	this.translate_map = function(difference_x, difference_y){
-		this.translation[0] += difference_x;
-		this.translation[1] += difference_y;
 	}
 
 	this.tilemap_update_loop = function(){
@@ -283,11 +294,17 @@ function UI(ui_canvas_id){
 	this.ui_ctx = this.ui_canvas.getContext('2d');
 
 	this.mouse_is_down = false;
-
 	this.last_x;
 	this.last_y;
 
+	this.translation = [0,0];
+
 	var self = this;
+
+	this.translate_map = function(difference_x, difference_y){
+		this.translation[0] += difference_x;
+		this.translation[1] += difference_y;
+	}
 
 	this.pan_listener = function(){
 		$('#'+this.ui_id).mousemove(function(e){
@@ -296,7 +313,7 @@ function UI(ui_canvas_id){
 				var tmp_difference_x = mouse_coords[0] - self.last_x;
 				var tmp_difference_y = mouse_coords[1] - self.last_y;
 
-				terrain.translate_map(tmp_difference_x, tmp_difference_y);
+				self.translate_map(tmp_difference_x, tmp_difference_y);
 
 				self.last_x = mouse_coords[0];
 				self.last_y = mouse_coords[1];
@@ -338,10 +355,10 @@ function UI(ui_canvas_id){
 
 				var iso_coords = self.iso_to_cartesian( [e.pageX, e.pageY] );
 
-				iso_coords[0] = Math.floor( (iso_coords[0] - terrain.translation[0]) / terrain.tile_width) * terrain.tile_width;
-				iso_coords[1] = Math.floor( (iso_coords[1] - terrain.translation[1]) / terrain.tile_width) * terrain.tile_width;
+				iso_coords[0] = Math.floor( (iso_coords[0] - self.translation[0]) / terrain.tile_width) * terrain.tile_width;
+				iso_coords[1] = Math.floor( (iso_coords[1] - self.translation[1]) / terrain.tile_width) * terrain.tile_width;
 
-				self.ui_ctx.rect( iso_coords[0] + terrain.translation[0], iso_coords[1] + terrain.translation[1], terrain.tile_width - terrain.tile_spacer, terrain.tile_width - terrain.tile_spacer);
+				self.ui_ctx.rect( iso_coords[0] + self.translation[0], iso_coords[1] + self.translation[1], terrain.tile_width - terrain.tile_spacer, terrain.tile_width - terrain.tile_spacer);
 				self.ui_ctx.fill();
 
 				var true_coords = Array();
@@ -369,3 +386,51 @@ function UI(ui_canvas_id){
 	}
 
 }
+
+function Building(building_canvas_id){
+
+	this.building_canvas = document.getElementById(building_canvas_id);
+	this.building_ctx = this.building_canvas.getContext('2d');
+	this.building_map;
+
+
+	this.draw_buildings = function(){
+
+		this.clear_buildings();
+		this.building_ctx.fillStyle = 'red';
+
+		for(var i in this.building_map){
+			if( this.building_map[i] === null ){
+				continue;
+			}
+
+			var tmp_x = Math.floor( i / cube_size);
+			var tmp_y = i - (tmp_x * cube_size);
+
+			tmp_x = tmp_x - (cube_size/2);
+			tmp_y = tmp_y - (cube_size/2);
+			tmp_x = (tmp_x * terrain.tile_width) + ui.translation[0];
+			tmp_y = (tmp_y * terrain.tile_width) + ui.translation[1];
+
+			this.building_ctx.fillRect(tmp_x + 10, tmp_y + 10, 30, 30);
+		}
+
+	}
+
+	this.clear_buildings = function(){
+		this.building_ctx.save();
+		this.building_ctx.setTransform(1, 0, 0, 1, 0, 0);
+		this.building_ctx.clearRect(0, 0, doc_width, doc_height);
+		this.building_ctx.restore();
+	}
+
+	this.make_building = function(x, y){
+		var tmp_coords = [ origin[0] + x, origin[1] + y ]
+		ws.send( get_json({type:'save_thing_at_location', coords:[tmp_coords[0], tmp_coords[1]]}) )
+	}
+
+	this.clear_building_data = function(){
+		ws.send( get_json({type:'clear_building_data'}) );
+	}
+}
+
