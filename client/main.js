@@ -1,7 +1,6 @@
 var doc_width = $(window).width();
 var doc_height = $(window).height();
-var compensated_height = doc_height > doc_width ? Math.ceil(doc_height * 1.15) : doc_height;
-var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(compensated_height,2) ));
+var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(doc_height*2,2) ));
 var url_resolution = location.search.split('resolution=')[1];
 var resolution = (url_resolution) ? parseInt(url_resolution,10) : 50;
 
@@ -10,11 +9,9 @@ var map_size = (url_map_size) ? parseInt(url_map_size,10) : 100;
 
 var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
-// cube_size = 50;
+// cube_size = 150;
 
 var tmp_adj = (map_size / cube_size) * 12.66;
-// console.log(tmp_adj);
-
 var origin = [0,tmp_adj];
 
 var terrain = new Terrain('main', resolution);
@@ -187,7 +184,7 @@ function Terrain(terrain_canvas_id, resolution){
 		var end_y = (cube_size * 0.5);
 
 		this.clear_map();
-		this.start_path();
+		this.begin_path();
 
 		var height_levels = [
 			{level:1},
@@ -222,11 +219,10 @@ function Terrain(terrain_canvas_id, resolution){
 
 			this.update_fill(height_levels[current_height].color);
 			this.fill();
-			this.start_path();
+			this.begin_path();
 
 			current_height++;
 		}
-// this.clear_map();
 	}
 
 	this.draw_tile = function(x, y){
@@ -260,7 +256,7 @@ function Terrain(terrain_canvas_id, resolution){
 
 	}
 
-	this.start_path = function(){
+	this.begin_path = function(){
 		this.terrain_ctx.beginPath();
 	}
 
@@ -285,13 +281,7 @@ function UI(ui_canvas_id){
 	this.ui_id = ui_canvas_id;
 	this.ui_canvas = document.getElementById(ui_canvas_id);
 	this.ui_ctx = this.ui_canvas.getContext('2d');
-	this.rot_radians = 45*Math.PI/180;
 
-	this.window_width = $(window).width();
-	this.window_height = $(window).height();
-
-	this.last_page_x;
-	this.last_page_y;
 	this.mouse_is_down = false;
 
 	this.last_x;
@@ -339,20 +329,17 @@ function UI(ui_canvas_id){
 
 	this.highlight_tile = function(){
 		self.ui_ctx.fillStyle = 'rgba(200,0,0,0.5)';
-		// self.ui_ctx.fillStyle = 'red';
 
 		$('#'+this.ui_id).mousemove(function(e){
 			if(!self.mouse_is_down){
 
 				self.clear_ui();
+				self.ui_ctx.beginPath();
 
 				var iso_coords = self.iso_to_cartesian( [e.pageX, e.pageY] );
 
 				iso_coords[0] = Math.floor( (iso_coords[0] - terrain.translation[0]) / terrain.tile_width) * terrain.tile_width;
 				iso_coords[1] = Math.floor( (iso_coords[1] - terrain.translation[1]) / terrain.tile_width) * terrain.tile_width;
-
-				// self.ui_ctx.fillStyle = 'rgba(0,100,0,0.5)';
-				self.ui_ctx.beginPath();
 
 				self.ui_ctx.rect( iso_coords[0] + terrain.translation[0], iso_coords[1] + terrain.translation[1], terrain.tile_width - terrain.tile_spacer, terrain.tile_width - terrain.tile_spacer);
 				self.ui_ctx.fill();
@@ -375,8 +362,8 @@ function UI(ui_canvas_id){
 		var cos = Math.cos(angle);
 		var sin = Math.sin(angle);
 
-		var new_x = x*cos - y*sin; // + obj.left;
-		var new_y = x*sin + y*cos; // + obj.top;
+		var new_x = x*cos - y*sin;
+		var new_y = x*sin + y*cos;
 
 		return [Math.round(new_x), Math.round(new_y)];
 	}
