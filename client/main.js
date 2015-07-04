@@ -138,6 +138,7 @@ $(document).ready(function(){
 		}
 
 		if(do_update){
+			get_building_data();
 			get_map_data();
 		}
 
