@@ -45,6 +45,17 @@ wss.on('connection', function connection(ws) {
 				ws.send( get_json({type:'tilemap', tilemap:tilemap}) );
 				break;
 
+			case 'get_map_data_cache':
+				var tilemap_cache = new Object();
+				for(var i in parsed_message.map_params.origin_points){
+					var origin_point = parsed_message.map_params.origin_points[i];
+					console.log( origin_point );
+					tilemap_cache.push('foo');
+				}
+				// var tilemap = generate_tilemap(parsed_message.map_params);
+				// ws.send( get_json( {type:'cached_map_data', tilemap: tilemap, origin: parsed_message.map_params.origin} ) );
+				break;
+
 			case 'get_building_data':
 				get_buildings( parsed_message.params, function(ret){
 

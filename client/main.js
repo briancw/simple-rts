@@ -59,6 +59,15 @@ function get_map_data(){
 	ws.send( get_json({type:'get_map_data', map_params:map_params}) );
 }
 
+function get_adjacant_map_data(){
+	get_map_data_cache( [origin] );
+}
+
+function get_map_data_cache(origin_points){
+	var map_params = {cube_size: cube_size, map_size: map_size, resolution: resolution, origin_points: origin_points, cached_chunk: true};
+	ws.send( get_json({type:'get_map_data_cache', map_params:map_params}) );
+}
+
 function get_building_data(){
 	var building_params = {origin: origin, cube_size: cube_size};
 	ws.send( get_json( {type:'get_building_data', params: building_params } ) );
@@ -75,6 +84,10 @@ $(document).ready(function(){
 			case 'tilemap':
 				tilemap = received_msg.tilemap;
 				terrain.draw_tilemap(tilemap);
+				break;
+
+			case 'cached_map_data':
+				console.log(received_msg.origin);
 				break;
 
 			case 'building_data':
@@ -127,11 +140,11 @@ $(document).ready(function(){
 		} else if(e.keyCode == 68){ // Right
 			origin[0]++;
 			do_update = true;
-		} else if(e.keyCode == 187){ // Plus
+		} else if(e.keyCode == 187 || e.keyCode == 61){ // Plus
 			map_size *= 1.1;
 			origin = [Math.round((origin[0]*1.1) + (3)), Math.round((origin[1]*1.1) + (3)) ];
 			do_update = true;
-		} else if(e.keyCode == 189){ // Minus
+		} else if(e.keyCode == 189 || e.keyCode == 173){ // Minus
 			map_size *= 0.9;
 			origin = [(origin[0]*0.9) - (3), (origin[1]*0.9) - (3) ];
 			do_update = true;
@@ -301,10 +314,30 @@ function UI(ui_canvas_id){
 	this.translation = [0,0];
 
 	var self = this;
-
+// var has_updated = false;
 	this.translate_map = function(difference_x, difference_y){
 		this.translation[0] += difference_x;
 		this.translation[1] += difference_y;
+
+		var half_map = (cube_size * terrain.tile_width / 2);
+		if(this.translation[0] >= half_map ){
+			// console.log('needs update nw');
+			this.load_chunk(0,-1);
+		} else if(this.translation[1] >= half_map) {
+			this.load_chunk(1,-1);
+		} else if(this.translation[0] <= -half_map) {
+			this.load_chunk(0,1);
+		} else if(this.translation[1] <= -half_map) {
+			this.load_chunk(1,1);
+		}
+
+		
+	}
+
+	this.load_chunk = function(direction, value){
+		origin[direction] += (cube_size * value);
+		this.translation[direction] = -this.translation[direction];
+		get_map_data();
 	}
 
 	this.pan_listener = function(){
@@ -366,6 +399,9 @@ function UI(ui_canvas_id){
 				true_coords[0] = (iso_coords[0]/terrain.tile_width) + (cube_size/2) + origin[0];
 				true_coords[1] = (iso_coords[1]/terrain.tile_width) + (cube_size/2) + origin[1];
 
+				if(true_coords[0] == origin[0]){
+					console.log(0);
+				}
 				// console.log( true_coords );
 			}
 		});
