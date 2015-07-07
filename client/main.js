@@ -51,6 +51,7 @@ ws.onerror = function(e){
 ws.onopen = function(){
 	init_socket_connect = true;
 	get_map_data();
+	get_adjacant_map_data();
 	get_building_data();
 };
 
@@ -60,7 +61,17 @@ function get_map_data(){
 }
 
 function get_adjacant_map_data(){
-	get_map_data_cache( [origin] );
+	var origin_points = Array();
+	origin_points[0] = ((origin[0] - cube_size) * map_size) + (origin[1] - cube_size);
+	origin_points[1] = ((origin[0] - cube_size) * map_size) + origin[1];
+	origin_points[2] = ((origin[0] - cube_size) * map_size) + (origin[1] + cube_size);
+	origin_points[3] = (origin[0] * map_size) + (origin[1] - cube_size);
+	origin_points[4] = (origin[0] * map_size) + (origin[1] + cube_size);
+	origin_points[5] = ((origin[0] + cube_size) * map_size) + (origin[1] - cube_size);
+	origin_points[6] = ((origin[0] + cube_size) * map_size) + origin[1];
+	origin_points[7] = ((origin[0] + cube_size) * map_size) + (origin[1] + cube_size);
+
+	get_map_data_cache( origin_points );
 }
 
 function get_map_data_cache(origin_points){
@@ -87,7 +98,7 @@ $(document).ready(function(){
 				break;
 
 			case 'cached_map_data':
-				console.log(received_msg.origin);
+				terrain.cached_map_data = received_msg.tilemap_cache;
 				break;
 
 			case 'building_data':
@@ -321,23 +332,24 @@ function UI(ui_canvas_id){
 
 		var half_map = (cube_size * terrain.tile_width / 2);
 		if(this.translation[0] >= half_map ){
-			// console.log('needs update nw');
-			this.load_chunk(0,-1);
+			this.load_chunk(0,-1); // NW
 		} else if(this.translation[1] >= half_map) {
-			this.load_chunk(1,-1);
+			this.load_chunk(1,-1); // NE
 		} else if(this.translation[0] <= -half_map) {
-			this.load_chunk(0,1);
+			this.load_chunk(0,1); // SW
 		} else if(this.translation[1] <= -half_map) {
-			this.load_chunk(1,1);
+			this.load_chunk(1,1); // SE
 		}
 
-		
+
 	}
 
 	this.load_chunk = function(direction, value){
-		origin[direction] += (cube_size * value);
-		this.translation[direction] = -this.translation[direction];
-		get_map_data();
+		// Load some more map data based on direction
+
+		// origin[direction] += (cube_size * value);
+		// this.translation[direction] = -this.translation[direction];
+		// get_map_data();
 	}
 
 	this.pan_listener = function(){

@@ -41,19 +41,28 @@ wss.on('connection', function connection(ws) {
 		switch (message_type){
 
 			case 'get_map_data':
+				console.time('generate map');
 				var tilemap = generate_tilemap(parsed_message.map_params);
 				ws.send( get_json({type:'tilemap', tilemap:tilemap}) );
+				console.timeEnd('generate map');
 				break;
 
 			case 'get_map_data_cache':
+				console.time('map cache');
 				var tilemap_cache = new Object();
-				for(var i in parsed_message.map_params.origin_points){
+				var origin_points = parsed_message.map_params.origin_points;
+
+				for(var i in origin_points){
 					var origin_point = parsed_message.map_params.origin_points[i];
-					console.log( origin_point );
-					tilemap_cache.push('foo');
+					var tmp_x = Math.floor( origin_point / map_size);
+					var tmp_y = origin_point - (tmp_x * map_size);
+
+					parsed_message.map_params.origin = [tmp_x, tmp_y];
+					tilemap_cache[origin_point] = generate_tilemap(parsed_message.map_params);
 				}
-				// var tilemap = generate_tilemap(parsed_message.map_params);
-				// ws.send( get_json( {type:'cached_map_data', tilemap: tilemap, origin: parsed_message.map_params.origin} ) );
+				// console.log(tilemap_cache);
+				ws.send( get_json( {type:'cached_map_data', tilemap_cache: tilemap_cache, origin_points:origin_points} ) );
+				console.timeEnd('map cache');
 				break;
 
 			case 'get_building_data':
@@ -114,10 +123,7 @@ wss.on('connection', function connection(ws) {
 		return s.substr(s.length-size);
 	}
 
-
-
 	function generate_tilemap(map_params){
-		console.time('generation');
 		var tilemap = Array();
 
 		if( typeof(map_params.cube_size) != 'undefined' ){
@@ -142,8 +148,8 @@ wss.on('connection', function connection(ws) {
 			return false;
 		}
 
-		var start_x = parseInt(origin[0],10);
-		var start_y = parseInt(origin[1],10);
+		var start_x = parseInt(origin[0], 10);
+		var start_y = parseInt(origin[1], 10);
 
 		// Map size must be set statically if all players are to see the same scale regardless of screen resolution
 		// Using this system, adding to x or y will pan the map 1 tile, no matter how many tiles the player sees.
@@ -175,7 +181,6 @@ wss.on('connection', function connection(ws) {
 			}
 		}
 
-		console.timeEnd('generation');
 		return tilemap;
 	}
 
