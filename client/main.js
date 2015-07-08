@@ -1,6 +1,7 @@
 var doc_width = $(window).width();
 var doc_height = $(window).height();
 var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(doc_height*2,2) ));
+var iso_width = Math.sqrt( Math.pow(doc_width, 2) + Math.pow(doc_width/2, 2) );
 var url_resolution = location.search.split('resolution=')[1];
 var resolution = (url_resolution) ? parseInt(url_resolution,10) : 50;
 
@@ -9,7 +10,7 @@ var map_size = (url_map_size) ? parseInt(url_map_size,10) : 100;
 
 var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
-// cube_size = 150;
+// cube_size = 10;
 
 var origin = [0,0];
 origin = [552648, 429251];
@@ -121,13 +122,10 @@ $(document).ready(function(){
 		var tmp_ctx = $(this)[0].getContext('2d');
 
 		var rot_radians = 45*Math.PI/180;
-
-		tmp_ctx.save();
 		tmp_ctx.translate(doc_width/2, doc_height/2);
 		tmp_ctx.scale(1,0.5);
 		tmp_ctx.rotate(rot_radians);
 	});
-
 
 	ui.click_listener();
 	ui.pan_listener();
@@ -199,24 +197,19 @@ function Terrain(terrain_canvas_id, resolution){
 
 	this.tile_width = resolution;
 	this.tile_spacer = 0.5;
+	this.cube_length = cube_size * this.tile_width;
+
+	this.tmp_canvas = document.createElement('canvas');
+	this.tmp_ctx = this.tmp_canvas.getContext('2d');
+	this.tmp_canvas.width = this.cube_length;
+	this.tmp_canvas.height = this.cube_length;
+	this.tmp_ctx.translate(this.cube_length/2,this.cube_length/2);
 
 	this.terrain_ctx.fillStyle = 'red';
 
 	this.needs_update = false;
 
 	this.draw_tilemap = function(tilemap){
-		var cube_size = Math.sqrt(tilemap.length);
-
-		// Off Screen canvas test
-		// var tmp_canvas = document.createElement('canvas');
-		// tmp_canvas.width = doc_width;
-		// tmp_canvas.height = doc_height;
-		// var tmp_ctx = tmp_canvas.getContext('2d');
-
-		// tmp_ctx.fillRect(10, 10, 100, 100);
-		// this.terrain_ctx.drawImage( tmp_canvas, 0, 0 );
-		// return false;
-
 		var start_x = -(cube_size/2);
 		var start_y = -(cube_size/2);
 		var end_x = (cube_size * 0.5);
@@ -263,18 +256,26 @@ function Terrain(terrain_canvas_id, resolution){
 			current_height++;
 		}
 
+		this.draw_cached();
+	}
+
+	this.draw_cached = function(){
+		this.clear_map();
+
+		this.tmp_ctx.fillRect(this.cube_length/2,0, 20, 20);
+		this.terrain_ctx.drawImage( this.tmp_canvas, (-this.cube_length/2) + ui.translation[0], (-this.cube_length/2) + ui.translation[1] );
 		building.draw_buildings();
 	}
 
 	this.draw_tile = function(x, y){
-		x += ui.translation[0];
-		y += ui.translation[1];
-		this.terrain_ctx.rect(x, y, this.tile_width - this.tile_spacer, this.tile_width - this.tile_spacer);
+		// x += ui.translation[0];
+		// y += ui.translation[1];
+		this.tmp_ctx.rect(x, y, this.tile_width - this.tile_spacer, this.tile_width - this.tile_spacer);
 	}
 
 	this.update_fill = function(new_fill_style){
-		if(this.terrain_ctx.fillStyle != new_fill_style){
-			this.terrain_ctx.fillStyle = new_fill_style;
+		if(this.tmp_ctx.fillStyle != new_fill_style){
+			this.tmp_ctx.fillStyle = new_fill_style;
 		}
 	}
 
@@ -284,7 +285,10 @@ function Terrain(terrain_canvas_id, resolution){
 		setInterval(function(){
 			if(self.needs_update){
 
-				self.draw_tilemap(tilemap);
+				time_start('g');
+				// self.draw_tilemap(tilemap);
+				self.draw_cached();
+				time_end('g');
 
 			}
 			self.needs_update = false;
@@ -293,11 +297,11 @@ function Terrain(terrain_canvas_id, resolution){
 	}
 
 	this.begin_path = function(){
-		this.terrain_ctx.beginPath();
+		this.tmp_ctx.beginPath();
 	}
 
 	this.fill = function(){
-		this.terrain_ctx.fill();
+		this.tmp_ctx.fill();
 	}
 
 	this.stroke = function(){
@@ -309,6 +313,10 @@ function Terrain(terrain_canvas_id, resolution){
 		this.terrain_ctx.setTransform(1, 0, 0, 1, 0, 0);
 		this.terrain_ctx.clearRect(0, 0, doc_width, doc_height);
 		this.terrain_ctx.restore();
+		// this.tmp_ctx.save();
+		// this.tmp_ctx.setTransform(1, 0, 0, 1, 0, 0);
+		// this.tmp_ctx.clearRect(0, 0, doc_width, doc_height);
+		// this.tmp_ctx.restore();
 	}
 
 }
@@ -444,7 +452,6 @@ function Building(building_canvas_id){
 
 
 	this.draw_buildings = function(){
-
 		this.clear_buildings();
 		this.building_ctx.fillStyle = 'red';
 

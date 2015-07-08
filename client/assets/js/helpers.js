@@ -1,3 +1,17 @@
+var time_took = Array();
+var timers = new Object();
+
+function time_start(timer_name){
+	timers[timer_name] = new Date().getTime();
+}
+
+function time_end(timer_name){
+	var end_time = new Date().getTime();
+	var time_took = end_time - timers[timer_name];
+
+	console.log( time_took );
+}
+
 function rough_size_of_object( object ) {
 
 	var objectList = [];
