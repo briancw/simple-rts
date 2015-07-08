@@ -5,9 +5,13 @@ function time_start(timer_name){
 	timers[timer_name] = new Date().getTime();
 }
 
-function time_end(timer_name){
+function time_end(timer_name, quiet_mode){
 	var end_time = new Date().getTime();
 	var time_took = end_time - timers[timer_name];
+
+	if(quiet_mode){
+		return time_took;
+	}
 
 	console.log( timer_name + ' ' + time_took + 'ms' );
 }
