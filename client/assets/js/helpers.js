@@ -9,7 +9,7 @@ function time_end(timer_name){
 	var end_time = new Date().getTime();
 	var time_took = end_time - timers[timer_name];
 
-	console.log( time_took );
+	console.log( timer_name + ' ' + time_took + 'ms' );
 }
 
 function rough_size_of_object( object ) {

@@ -1,3 +1,4 @@
+// Initialize App parameters
 var doc_width = $(window).width();
 var doc_height = $(window).height();
 var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(doc_height*2,2) ));
@@ -16,15 +17,29 @@ var origin = [0,0];
 origin = [552648, 429251];
 map_size = 2500000;
 
+// Initialize core game classes
 var terrain = new Terrain('main', resolution);
 var building = new Building('buildings');
 var ui = new UI('ui');
 
-var tilemap;
+// Initialize main animation loop
+window.requestAnimFrame = (function(){
+	return window.requestAnimationFrame		||
+		window.webkitRequestAnimationFrame	||
+		window.mozRequestAnimationFrame		||
+		function( callback ){
+			window.setTimeout(callback, 1000 / 60);
+		};
+})();
 
-var init_socket_connect = false;
+(function animloop(){
+	requestAnimFrame(animloop);
+	terrain.tilemap_update_loop();
+})();
 
 // Setup Networking
+var init_socket_connect = false;
+
 if (!"WebSocket" in window){
 	alert("Browser doesn't support WebSockets. Go kick rocks.");
 }
@@ -39,14 +54,14 @@ var ws = new WebSocket(server_url);
 
 ws.onclose = function(){
 	if(!init_socket_connect){
-		visual_error( 'Unable to establish WebSocket connection.');
+		ui.visual_error( 'Unable to establish WebSocket connection.');
 	} else {
-		visual_error( 'WebSocket Connection closed');
+		ui.visual_error( 'WebSocket Connection closed');
 	}
 };
 
 ws.onerror = function(e){
-	visual_error('There was an error with the WebSocket connection.');
+	ui.visual_error('There was an error with the WebSocket connection.');
 }
 
 ws.onopen = function(){
@@ -56,6 +71,7 @@ ws.onopen = function(){
 	get_building_data();
 };
 
+// Temporary Helper Functions
 function get_map_data(){
 	var map_params = {cube_size: cube_size, map_size: map_size, resolution: resolution, origin: origin};
 	ws.send( get_json({type:'get_map_data', map_params:map_params}) );
@@ -85,6 +101,18 @@ function get_building_data(){
 	ws.send( get_json( {type:'get_building_data', params: building_params } ) );
 }
 
+function get_json(input){
+	try {
+		var json_string = JSON.stringify(input);
+	} catch(err) {
+		console.log('Invalid Json');
+		console.log(err);
+		return false;
+	}
+
+	return json_string;
+}
+
 $(document).ready(function(){
 
 	ws.onmessage = function (ret){
@@ -94,8 +122,8 @@ $(document).ready(function(){
 		switch (message_type){
 
 			case 'tilemap':
-				tilemap = received_msg.tilemap;
-				terrain.draw_tilemap(tilemap);
+				terrain.tilemap = received_msg.tilemap;
+				terrain.draw_tilemap(terrain.tilemap);
 				break;
 
 			case 'cached_map_data':
@@ -130,13 +158,10 @@ $(document).ready(function(){
 	ui.click_listener();
 	ui.pan_listener();
 	ui.highlight_tile();
-	terrain.tilemap_update_loop();
-
 
 	$(document).keydown(function(e){
 		var do_update = false;
 
-		// var pan_amount = 15;
 		if(e.keyCode == 87){ // Up
 			origin[1]--;
 			do_update = true;
@@ -168,27 +193,6 @@ $(document).ready(function(){
 
 });
 
-function get_json(input){
-	try {
-		var json_string = JSON.stringify(input);
-	} catch(err) {
-		console.log('Invalid Json');
-		console.log(err);
-		return false;
-	}
-
-	return json_string;
-}
-
-function visual_error(error_message){
-	$('.error_message_box .error_message').html(error_message);
-	$('.error_message_box').fadeIn(600);
-
-	setTimeout(function(){
-		$('.error_message_box').fadeOut(500);
-	}, 3000);
-}
-
 
 function Terrain(terrain_canvas_id, resolution){
 
@@ -204,6 +208,8 @@ function Terrain(terrain_canvas_id, resolution){
 	this.tmp_canvas.width = this.cube_length;
 	this.tmp_canvas.height = this.cube_length;
 	this.tmp_ctx.translate(this.cube_length/2,this.cube_length/2);
+
+	this.tilemap;
 
 	this.terrain_ctx.fillStyle = 'red';
 
@@ -268,8 +274,6 @@ function Terrain(terrain_canvas_id, resolution){
 	}
 
 	this.draw_tile = function(x, y){
-		// x += ui.translation[0];
-		// y += ui.translation[1];
 		this.tmp_ctx.rect(x, y, this.tile_width - this.tile_spacer, this.tile_width - this.tile_spacer);
 	}
 
@@ -280,20 +284,13 @@ function Terrain(terrain_canvas_id, resolution){
 	}
 
 	this.tilemap_update_loop = function(){
-		var self = this;
 
-		setInterval(function(){
-			if(self.needs_update){
-
-				time_start('g');
-				// self.draw_tilemap(tilemap);
-				self.draw_cached();
-				time_end('g');
-
-			}
-			self.needs_update = false;
-		}, 10);
-
+		if(this.needs_update){
+			// time_start('g');
+			this.draw_cached();
+			// time_end('g');
+		}
+		this.needs_update = false;
 	}
 
 	this.begin_path = function(){
@@ -313,10 +310,6 @@ function Terrain(terrain_canvas_id, resolution){
 		this.terrain_ctx.setTransform(1, 0, 0, 1, 0, 0);
 		this.terrain_ctx.clearRect(0, 0, doc_width, doc_height);
 		this.terrain_ctx.restore();
-		// this.tmp_ctx.save();
-		// this.tmp_ctx.setTransform(1, 0, 0, 1, 0, 0);
-		// this.tmp_ctx.clearRect(0, 0, doc_width, doc_height);
-		// this.tmp_ctx.restore();
 	}
 
 }
@@ -333,7 +326,7 @@ function UI(ui_canvas_id){
 	this.translation = [0,0];
 
 	var self = this;
-// var has_updated = false;
+
 	this.translate_map = function(difference_x, difference_y){
 		this.translation[0] += difference_x;
 		this.translation[1] += difference_y;
@@ -348,8 +341,6 @@ function UI(ui_canvas_id){
 		} else if(this.translation[1] <= -half_map) {
 			this.load_chunk(1,1); // SE
 		}
-
-
 	}
 
 	this.load_chunk = function(direction, value){
@@ -419,13 +410,19 @@ function UI(ui_canvas_id){
 				true_coords[0] = (iso_coords[0]/terrain.tile_width) + (cube_size/2) + origin[0];
 				true_coords[1] = (iso_coords[1]/terrain.tile_width) + (cube_size/2) + origin[1];
 
-				if(true_coords[0] == origin[0]){
-					console.log(0);
-				}
 				// console.log( true_coords );
 			}
 		});
 
+	}
+
+	this.visual_error = function(error_message){
+		$('.error_message_box .error_message').html(error_message);
+		$('.error_message_box').fadeIn(600);
+
+		setTimeout(function(){
+			$('.error_message_box').fadeOut(500);
+		}, 3000);
 	}
 
 	this.iso_to_cartesian = function(coords){
