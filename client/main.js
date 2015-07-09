@@ -167,11 +167,7 @@ function Network(){
 		switch (message_type){
 
 			case 'map_data':
-				for(var i in received_msg.tilemaps){
-					terrain.draw_tilemap( received_msg.tilemaps[i], i );
-				}
-				terrain.group_cached_maps();
-				terrain.draw_cached();
+				terrain.update_tilemaps(received_msg.tilemaps);
 				break;
 
 			case 'building_data':
@@ -219,14 +215,25 @@ function Terrain(terrain_canvas_id, resolution){
 	this.terrain_ctx.fillStyle = 'red';
 
 	this.needs_update = false;
+	this.map_ready = false;
 
-	this.draw_tilemap = function(tilemap, origin_point){
+	this.update_tilemaps = function(tilemaps){
 
-		if( typeof(this.tmp_map_canvases[origin_point]) != 'undefined' ){
-			console.log('Already have this cached');
-			return false;
+		for(var i in tilemaps){
+
+			if( typeof(this.tmp_map_canvases[i]) != 'undefined' ){
+				console.log('Already have this cached');
+				continue;
+			}
+
+			this.draw_tilemap( tilemaps[i], i );
 		}
 
+		this.group_cached_maps();
+		this.draw_cached();
+	}
+
+	this.draw_tilemap = function(tilemap, origin_point){
 		var tmp_canvas = document.createElement('canvas');
 		var tmp_ctx = tmp_canvas.getContext('2d');
 		tmp_canvas.width = this.cube_length;
@@ -282,7 +289,15 @@ function Terrain(terrain_canvas_id, resolution){
 	}
 
 	this.group_cached_maps = function(){
-		var tmp_keys = Object.keys( this.tmp_map_canvases );
+		var tmp_keys = Array();
+		var tmp_origin_points = origin_points();
+
+		for(var i in tmp_origin_points){
+			var tmp_canvas_index = tmp_origin_points[i];
+			tmp_keys[i] = tmp_canvas_index;
+		}
+
+		this.clear_map_cache();
 
 		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[0]], (-this.cube_length*1.5), (-this.cube_length*1.5) );
 		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[1]], (-this.cube_length*1.5), (-this.cube_length/2) );
@@ -294,13 +309,13 @@ function Terrain(terrain_canvas_id, resolution){
 		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[7]], (this.cube_length/2), (-this.cube_length/2) );
 		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[8]], (this.cube_length/2), (this.cube_length/2) );
 
-		console.log( primary_tmp_ctx, primary_tmp_ctx.canvas.width );
+		this.map_ready = true;
 	}
 
 	this.draw_cached = function(){
 		this.clear_map();
 		this.terrain_ctx.drawImage( primary_tmp_canvas, (-this.cube_length*1.5) + ui.translation[0], (-this.cube_length*1.5) + ui.translation[1] );
-		building.draw_buildings();
+		// building.draw_buildings();
 	}
 
 	this.draw_tile = function(x, y, ctx){
@@ -315,12 +330,12 @@ function Terrain(terrain_canvas_id, resolution){
 
 	this.tilemap_update_loop = function(){
 
-		if(this.needs_update){
-			// time_start('g');
+		if(this.map_ready && this.needs_update){
+
 			this.draw_cached();
-			// time_end('g');
+
+			this.needs_update = false;
 		}
-		this.needs_update = false;
 	}
 
 	this.begin_path = function(ctx){
@@ -340,6 +355,13 @@ function Terrain(terrain_canvas_id, resolution){
 		this.terrain_ctx.setTransform(1, 0, 0, 1, 0, 0);
 		this.terrain_ctx.clearRect(0, 0, doc_width, doc_height);
 		this.terrain_ctx.restore();
+	}
+
+	this.clear_map_cache = function(){
+		primary_tmp_ctx.save();
+		primary_tmp_ctx.setTransform(1, 0, 0, 1, 0, 0);
+		primary_tmp_ctx.clearRect(0, 0, this.cube_length * 3, this.cube_length * 3);
+		primary_tmp_ctx.restore();
 	}
 
 }
@@ -376,14 +398,28 @@ function UI(ui_canvas_id){
 	this.load_chunk = function(direction, value){
 		// Load some more map data based on direction
 
-		// origin[direction] += (cube_size * value);
-		// this.translation[direction] = -this.translation[direction];
-		// get_map_data();
+		this.translation[direction] = -this.translation[direction];
+		terrain.map_ready = false;
+
+		origin[direction] += cube_size * value;
+		origin_point = coords_to_index(origin);
+		var new_origin_points = origin_points();
+		var points_to_get = Array();
+
+		// Determine which chunks we don't currently have cached
+		for(var i in new_origin_points ){
+			if( typeof(terrain.tmp_map_canvases[new_origin_points[i]]) == 'undefined' ){
+				points_to_get.push( new_origin_points[i] );
+			}
+		}
+
+		network.get_map_data( points_to_get );
+
 	}
 
 	this.pan_listener = function(){
 		$('#'+this.ui_id).mousemove(function(e){
-			if(self.mouse_is_down){
+			if(self.mouse_is_down && terrain.map_ready){
 				var mouse_coords = self.iso_to_cartesian([e.pageX, e.pageY]);
 				var tmp_difference_x = mouse_coords[0] - self.last_x;
 				var tmp_difference_y = mouse_coords[1] - self.last_y;
