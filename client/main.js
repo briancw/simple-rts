@@ -11,16 +11,19 @@ var map_size = (url_map_size) ? parseInt(url_map_size,10) : 100;
 
 var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
+cube_size = cube_size > 52 ? 52 : cube_size; // Something weird happens if the canvas is wider than 8048, so this is a temporary band-aid
 // cube_size = 25;
 
 var origin = [0,0];
 origin = [552648, 429251];
+var origin_point = coords_to_index(origin);
 map_size = 2500000;
 
 // Initialize core game classes
 var terrain = new Terrain('main', resolution);
 var building = new Building('buildings');
 var ui = new UI('ui');
+var network = new Network();
 
 // Initialize main animation loop
 window.requestAnimFrame = (function(){
@@ -37,113 +40,28 @@ window.requestAnimFrame = (function(){
 	terrain.tilemap_update_loop();
 })();
 
-// Setup Networking
-var init_socket_connect = false;
-
-if (!"WebSocket" in window){
-	alert("Browser doesn't support WebSockets. Go kick rocks.");
-}
-
-var current_env = window.location.host;
-if(current_env == 'simple-rts.zimmerloe.com'){
-	var server_url = 'ws://simple-rts.zimmerloe.com:9005';
-} else {
-	var server_url = 'ws://localhost:9005';
-}
-var ws = new WebSocket(server_url);
-
-ws.onclose = function(){
-	if(!init_socket_connect){
-		ui.visual_error( 'Unable to establish WebSocket connection.');
-	} else {
-		ui.visual_error( 'WebSocket Connection closed');
-	}
-};
-
-ws.onerror = function(e){
-	ui.visual_error('There was an error with the WebSocket connection.');
-}
-
-ws.onopen = function(){
-	init_socket_connect = true;
-	get_map_data();
-	get_adjacent_map_data();
-	get_building_data();
-};
 
 // Temporary Helper Functions
-function get_map_data(){
-	var map_params = {cube_size: cube_size, map_size: map_size, resolution: resolution, origin: origin};
-	ws.send( get_json({type:'get_map_data', map_params:map_params}) );
+function coords_to_index(coords){
+	return (coords[0] * map_size) + coords[1];
 }
 
-function get_adjacent_map_data(){
+function origin_points(){
 	var origin_points = Array();
 	origin_points[0] = ((origin[0] - cube_size) * map_size) + (origin[1] - cube_size);
 	origin_points[1] = ((origin[0] - cube_size) * map_size) + origin[1];
 	origin_points[2] = ((origin[0] - cube_size) * map_size) + (origin[1] + cube_size);
-	origin_points[3] = (origin[0] * map_size) + (origin[1] - cube_size);
-	origin_points[4] = (origin[0] * map_size) + (origin[1] + cube_size);
-	origin_points[5] = ((origin[0] + cube_size) * map_size) + (origin[1] - cube_size);
-	origin_points[6] = ((origin[0] + cube_size) * map_size) + origin[1];
-	origin_points[7] = ((origin[0] + cube_size) * map_size) + (origin[1] + cube_size);
+	origin_points[3] = ((origin[0] * map_size)) + (origin[1] - cube_size);
+	origin_points[4] = ((origin[0] * map_size)) + origin[1];
+	origin_points[5] = ((origin[0] * map_size)) + (origin[1] + cube_size);
+	origin_points[6] = ((origin[0] + cube_size) * map_size) + (origin[1] - cube_size);
+	origin_points[7] = ((origin[0] + cube_size) * map_size) + origin[1];
+	origin_points[8] = ((origin[0] + cube_size) * map_size) + (origin[1] + cube_size);
 
-	get_map_data_cache( origin_points );
-}
-
-function get_map_data_cache(origin_points){
-	var map_params = {cube_size: cube_size, map_size: map_size, resolution: resolution, origin_points: origin_points, cached_chunk: true};
-	ws.send( get_json({type:'get_map_data_cache', map_params:map_params}) );
-}
-
-function get_building_data(){
-	var building_params = {origin: origin, cube_size: cube_size};
-	ws.send( get_json( {type:'get_building_data', params: building_params } ) );
-}
-
-function get_json(input){
-	try {
-		var json_string = JSON.stringify(input);
-	} catch(err) {
-		console.log('Invalid Json');
-		console.log(err);
-		return false;
-	}
-
-	return json_string;
+	return origin_points;
 }
 
 $(document).ready(function(){
-
-	ws.onmessage = function (ret){
-		var received_msg = JSON.parse(ret.data);
-		var message_type = received_msg.type;
-
-		switch (message_type){
-
-			case 'tilemap':
-				terrain.tilemap = received_msg.tilemap;
-				terrain.draw_tilemap(terrain.tilemap, terrain.tmp_primary_ctx);
-				// terrain.draw_cached();
-				break;
-
-			case 'cached_map_data':
-				terrain.cached_map_data = received_msg.tilemap_cache;
-				terrain.draw_cached_maps();
-				terrain.draw_cached();
-				break;
-
-			case 'building_data':
-				building.building_map = received_msg.building_map;
-				building.draw_buildings();
-				break;
-
-			default:
-				console.log('Unkown server response');
-				break;
-
-		}
-	};
 
 	$('.canvas').each(function(){
 		$(this).attr('width', doc_width);
@@ -161,7 +79,7 @@ $(document).ready(function(){
 	ui.click_listener();
 	ui.pan_listener();
 	ui.highlight_tile();
-
+/*
 	$(document).keydown(function(e){
 		var do_update = false;
 
@@ -193,9 +111,93 @@ $(document).ready(function(){
 		}
 
 	});
-
+*/
 });
 
+function Network(){
+
+	var self = this;
+
+	if (!"WebSocket" in window){
+		alert("Browser doesn't support WebSockets. Go kick rocks.");
+	}
+
+	var init_socket_connect = false;
+	var current_env = window.location.host;
+
+	if(current_env == 'simple-rts.zimmerloe.com'){
+		var server_url = 'ws://simple-rts.zimmerloe.com:9005';
+	} else {
+		var server_url = 'ws://localhost:9005';
+	}
+	var ws = new WebSocket(server_url);
+
+	ws.onclose = function(){
+		if(!init_socket_connect){
+			ui.visual_error( 'Unable to establish WebSocket connection.');
+		} else {
+			ui.visual_error( 'WebSocket Connection closed');
+		}
+	};
+
+	ws.onerror = function(e){
+		ui.visual_error('There was an error with the WebSocket connection.');
+	}
+
+	ws.onopen = function(){
+		init_socket_connect = true;
+		self.get_map_data( origin_points() );
+		self.get_building_data();
+	};
+
+	this.get_map_data = function(origin_points){
+		var map_params = {cube_size: cube_size, map_size: map_size, resolution: resolution, origin_points: origin_points};
+		ws.send( get_json({type:'get_map_data', map_params:map_params}) );
+	};
+
+	this.get_building_data = function(){
+		var building_params = {origin: origin, cube_size: cube_size};
+		ws.send( get_json( {type:'get_building_data', params: building_params } ) );
+	};
+
+	ws.onmessage = function (ret){
+		var received_msg = JSON.parse(ret.data);
+		var message_type = received_msg.type;
+
+		switch (message_type){
+
+			case 'map_data':
+				for(var i in received_msg.tilemaps){
+					terrain.draw_tilemap( received_msg.tilemaps[i], i );
+				}
+				terrain.group_cached_maps();
+				terrain.draw_cached();
+				break;
+
+			case 'building_data':
+				building.building_map = received_msg.building_map;
+				building.draw_buildings();
+				break;
+
+			default:
+				console.log('Unkown server response');
+				break;
+
+		}
+	};
+
+	function get_json(input){
+		try {
+			var json_string = JSON.stringify(input);
+		} catch(err) {
+			console.log('Invalid Json');
+			console.log(err);
+			return false;
+		}
+
+		return json_string;
+	};
+}
 
 function Terrain(terrain_canvas_id, resolution){
 
@@ -206,31 +208,39 @@ function Terrain(terrain_canvas_id, resolution){
 	this.tile_spacer = 0.5;
 	this.cube_length = cube_size * this.tile_width;
 
-	this.tmp_primary_canvas = document.createElement('canvas');
-	this.tmp_primary_ctx = this.tmp_primary_canvas.getContext('2d');
-	this.tmp_primary_canvas.width = this.cube_length;
-	this.tmp_primary_canvas.height = this.cube_length;
-	this.tmp_primary_ctx.translate(this.cube_length/2,this.cube_length/2);
+	this.tmp_map_canvases = new Object();
 
-	this.tilemap;
-	this.cached_map_data;
-	this.adjacent_map_canvases = Array();
+	var primary_tmp_canvas = document.createElement('canvas');
+	var primary_tmp_ctx = primary_tmp_canvas.getContext('2d');
+	primary_tmp_canvas.width = this.cube_length * 3;
+	primary_tmp_canvas.height = this.cube_length * 3;
+	primary_tmp_ctx.translate(this.cube_length * 1.5, this.cube_length * 1.5);
 
 	this.terrain_ctx.fillStyle = 'red';
 
 	this.needs_update = false;
 
-	iso_canvas = function(ctx){
+	this.draw_tilemap = function(tilemap, origin_point){
 
-	}
+		if( typeof(this.tmp_map_canvases[origin_point]) != 'undefined' ){
+			console.log('Already have this cached');
+			return false;
+		}
 
-	this.draw_tilemap = function(tilemap, ctx){
+		var tmp_canvas = document.createElement('canvas');
+		var tmp_ctx = tmp_canvas.getContext('2d');
+		tmp_canvas.width = this.cube_length;
+		tmp_canvas.height = this.cube_length;
+		tmp_ctx.translate(this.cube_length/2,this.cube_length/2);
+
+		this.tmp_map_canvases[origin_point] = tmp_canvas;
+
 		var start_x = -(cube_size/2);
 		var start_y = -(cube_size/2);
 		var end_x = (cube_size * 0.5);
 		var end_y = (cube_size * 0.5);
 
-		this.begin_path(ctx);
+		this.begin_path(tmp_ctx);
 
 		var height_levels = [
 			{level:1},
@@ -257,34 +267,39 @@ function Terrain(terrain_canvas_id, resolution){
 					var height = tilemap[tmp_i].height;
 
 					if(height >= ih && height < lh){
-						this.draw_tile(ix * this.tile_width, iy * this.tile_width, ctx);
+						this.draw_tile(ix * this.tile_width, iy * this.tile_width, tmp_ctx);
 					}
 
 				}
 			}
 
-			this.update_fill(height_levels[current_height].color, ctx);
-			this.fill(ctx);
-			this.begin_path(ctx);
+			this.update_fill(height_levels[current_height].color, tmp_ctx);
+			this.fill(tmp_ctx);
+			this.begin_path(tmp_ctx);
 
 			current_height++;
 		}
 	}
 
+	this.group_cached_maps = function(){
+		var tmp_keys = Object.keys( this.tmp_map_canvases );
+
+		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[0]], (-this.cube_length*1.5), (-this.cube_length*1.5) );
+		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[1]], (-this.cube_length*1.5), (-this.cube_length/2) );
+		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[2]], (-this.cube_length*1.5), (this.cube_length/2) );
+		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[3]], (-this.cube_length/2), (-this.cube_length*1.5) - 0 );
+		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[4]], (-this.cube_length/2), (-this.cube_length/2) );
+		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[5]], (-this.cube_length/2), (this.cube_length/2) + 0);
+		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[6]], (this.cube_length/2), (-this.cube_length*1.5) );
+		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[7]], (this.cube_length/2), (-this.cube_length/2) );
+		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[8]], (this.cube_length/2), (this.cube_length/2) );
+
+		console.log( primary_tmp_ctx, primary_tmp_ctx.canvas.width );
+	}
+
 	this.draw_cached = function(){
 		this.clear_map();
-
-		this.terrain_ctx.drawImage( this.tmp_primary_canvas, (-this.cube_length/2) + ui.translation[0], (-this.cube_length/2) + ui.translation[1] );
-
-		this.terrain_ctx.drawImage( this.adjacent_map_canvases[0][0], (-this.cube_length*1.5) + ui.translation[0], (-this.cube_length*1.5) + ui.translation[1] );
-		this.terrain_ctx.drawImage( this.adjacent_map_canvases[1][0], (-this.cube_length*1.5) + ui.translation[0], (-this.cube_length/2) + ui.translation[1] );
-		this.terrain_ctx.drawImage( this.adjacent_map_canvases[2][0], (-this.cube_length*1.5) + ui.translation[0], (this.cube_length/2) + ui.translation[1] );
-		this.terrain_ctx.drawImage( this.adjacent_map_canvases[3][0], (-this.cube_length/2) + ui.translation[0], (-this.cube_length*1.5) + ui.translation[1] );
-		this.terrain_ctx.drawImage( this.adjacent_map_canvases[4][0], (-this.cube_length/2) + ui.translation[0], (this.cube_length/2) + ui.translation[1] );
-		this.terrain_ctx.drawImage( this.adjacent_map_canvases[5][0], (this.cube_length/2) + ui.translation[0], (-this.cube_length*1.5) + ui.translation[1] );
-		this.terrain_ctx.drawImage( this.adjacent_map_canvases[6][0], (this.cube_length/2) + ui.translation[0], (-this.cube_length/2) + ui.translation[1] );
-		this.terrain_ctx.drawImage( this.adjacent_map_canvases[7][0], (this.cube_length/2) + ui.translation[0], (this.cube_length/2) + ui.translation[1] );
-
+		this.terrain_ctx.drawImage( primary_tmp_canvas, (-this.cube_length*1.5) + ui.translation[0], (-this.cube_length*1.5) + ui.translation[1] );
 		building.draw_buildings();
 	}
 
@@ -325,25 +340,6 @@ function Terrain(terrain_canvas_id, resolution){
 		this.terrain_ctx.setTransform(1, 0, 0, 1, 0, 0);
 		this.terrain_ctx.clearRect(0, 0, doc_width, doc_height);
 		this.terrain_ctx.restore();
-	}
-
-	this.draw_cached_maps = function(){
-
-		var c = 0;
-		for(var i in this.cached_map_data){
-			var tmp_canvas = document.createElement('canvas');
-			var tmp_ctx = tmp_canvas.getContext('2d');
-			tmp_canvas.width = this.cube_length;
-			tmp_canvas.height = this.cube_length;
-			tmp_ctx.translate(this.cube_length/2,this.cube_length/2);
-
-			this.adjacent_map_canvases[c] = [tmp_canvas, tmp_ctx];
-
-			this.draw_tilemap(this.cached_map_data[i], this.adjacent_map_canvases[c][1]);
-
-			c++;
-		}
-
 	}
 
 }
@@ -513,11 +509,13 @@ function Building(building_canvas_id){
 
 	this.make_building = function(x, y){
 		var tmp_coords = [ origin[0] + x, origin[1] + y ]
-		ws.send( get_json({type:'save_thing_at_location', coords:[tmp_coords[0], tmp_coords[1]]}) )
+		// ws.send( get_json({type:'save_thing_at_location', coords:[tmp_coords[0], tmp_coords[1]]}) )
+		// Send call to network function
 	}
 
 	this.clear_building_data = function(){
-		ws.send( get_json({type:'clear_building_data'}) );
+		// ws.send( get_json({type:'clear_building_data'}) );
+		// Send call to network function
 	}
 }
 
