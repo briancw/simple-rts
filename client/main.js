@@ -372,6 +372,7 @@ function UI(ui_canvas_id){
 	this.ui_ctx = this.ui_canvas.getContext('2d');
 
 	this.mouse_is_down = false;
+	this.buffer = 200;
 	this.last_x;
 	this.last_y;
 
@@ -384,21 +385,20 @@ function UI(ui_canvas_id){
 		this.translation[1] += difference_y;
 
 		var half_map = (cube_size * terrain.tile_width / 2);
-		if(this.translation[0] >= half_map ){
+		if(this.translation[0] >= half_map + this.buffer){
 			this.load_chunk(0,-1); // NW
-		} else if(this.translation[1] >= half_map) {
+		} else if(this.translation[1] >= half_map + this.buffer) {
 			this.load_chunk(1,-1); // NE
-		} else if(this.translation[0] <= -half_map) {
+		} else if(this.translation[0] <= -half_map - this.buffer) {
 			this.load_chunk(0,1); // SW
-		} else if(this.translation[1] <= -half_map) {
+		} else if(this.translation[1] <= -half_map - this.buffer) {
 			this.load_chunk(1,1); // SE
 		}
 	}
 
 	this.load_chunk = function(direction, value){
 		// Load some more map data based on direction
-
-		this.translation[direction] = -this.translation[direction];
+		this.translation[direction] = -this.translation[direction] - (this.buffer * value * 2);
 		terrain.map_ready = false;
 
 		origin[direction] += cube_size * value;
