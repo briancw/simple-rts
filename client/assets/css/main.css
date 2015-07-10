@@ -1,0 +1,30 @@
+.canvas {
+  position: absolute;
+  top: 0px;
+  left: 0px; }
+
+.error_message_box {
+  display: none;
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 9001;
+  width: 250px;
+  height: 50px;
+  padding: 8px;
+  font-family: arial, Helvetica, sans-serif;
+  border-radius: 5px;
+  background-color: rgba(0, 148, 255, 0.5); }
+
+.ui_container {
+  position: absolute;
+  left: 0px;
+  bottom: 0px;
+  height: 200px;
+  width: 100%; }
+  .ui_container .button {
+    font-family: tahoma;
+    cursor: pointer;
+    border: 1px solid black;
+    padding: 7px 10px;
+    display: inline-block; }

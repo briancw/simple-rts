@@ -1,6 +1,6 @@
 // Initialize App parameters
 var doc_width = $(window).width();
-var doc_height = $(window).height();
+var doc_height = $(window).height() - $('.ui_container').height();
 var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(doc_height*2,2) ));
 var iso_width = Math.sqrt( Math.pow(doc_width, 2) + Math.pow(doc_width/2, 2) );
 
@@ -19,10 +19,11 @@ var origin = [552648, 429251];
 var origin_point = coords_to_index(origin);
 
 // Initialize core game classes
+var network = new Network();
 var terrain = new Terrain('main', resolution);
 var building = new Building('buildings');
 var ui = new UI('ui');
-var network = new Network();
+var controls = new Controls();
 
 // Initialize main animation loop
 window.requestAnimFrame = (function(){
@@ -83,6 +84,8 @@ $(document).ready(function(){
 	ui.highlight_tile();
 	ui.keyboard_listener();
 
+
+
 });
 
 function Network(){
@@ -119,6 +122,8 @@ function Network(){
 		init_socket_connect = true;
 		self.get_map_data( origin_points() );
 		self.get_building_data();
+
+		self.login('brian');
 	};
 
 	this.get_map_data = function(origin_points){
@@ -131,13 +136,16 @@ function Network(){
 		ws.send( get_json( {type:'get_building_data', params: building_params } ) );
 	};
 
-	this.make_building = function(x, y){
-		var tmp_coords = [ origin[0] + x, origin[1] + y ]
-		ws.send( get_json({type:'save_thing_at_location', coords:[tmp_coords[0], tmp_coords[1]]}) )
+	this.make_building = function(building_type, coords){
+		ws.send( get_json({type:'make_building', building_type: building_type, coords: coords}) )
 	}
 
 	this.clear_building_data = function(){
 		ws.send( get_json({type:'clear_building_data'}) );
+	}
+
+	this.login = function(username){
+		ws.send( get_json({type:'login', username: username}) );
 	}
 
 	ws.onmessage = function (ret){
@@ -153,6 +161,10 @@ function Network(){
 			case 'building_data':
 				building.building_map = received_msg.building_map;
 				building.draw_buildings();
+				break;
+
+			case 'login':
+				controls.launch_base_button();
 				break;
 
 			default:
@@ -353,6 +365,8 @@ function UI(ui_canvas_id){
 	this.pan_amount_vertical = this.pan_amount * 1.5;
 	this.last_x;
 	this.last_y;
+	this.is_click = true;
+	this.click_callback = function(t){ console.log(t) };
 
 	this.translation = [0,0];
 
@@ -399,6 +413,8 @@ function UI(ui_canvas_id){
 
 	this.pan_listener = function(){
 		$('#'+this.ui_id).mousemove(function(e){
+			self.is_click = false;
+
 			if(self.mouse_is_down && terrain.map_ready){
 
 				if(e.which === 0){
@@ -426,12 +442,28 @@ function UI(ui_canvas_id){
 				self.last_x = mouse_coords[0];
 				self.last_y = mouse_coords[1];
 				self.mouse_is_down = true;
+				self.is_click = true;
 			}
 		});
 
 		$('#'+this.ui_id).mouseup(function(e){
 			self.mouse_is_down = false;
+
+			if(self.is_click && typeof(self.click_callback) == 'function'){
+				var iso_coords = self.iso_to_cartesian( [e.pageX, e.pageY] );
+				iso_coords[0] = Math.floor( (iso_coords[0] - self.translation[0]) / terrain.tile_width) * terrain.tile_width;
+				iso_coords[1] = Math.floor( (iso_coords[1] - self.translation[1]) / terrain.tile_width) * terrain.tile_width;
+
+				var true_coords = Array();
+				true_coords[0] = (iso_coords[0]/terrain.tile_width) + (cube_size/2) + origin[0];
+				true_coords[1] = (iso_coords[1]/terrain.tile_width) + (cube_size/2) + origin[1];
+
+				self.click_callback(true_coords);
+				self.click_callback = null;
+			}
+
 		});
+
 	}
 
 	this.highlight_tile = function(){
@@ -444,18 +476,12 @@ function UI(ui_canvas_id){
 				self.ui_ctx.beginPath();
 
 				var iso_coords = self.iso_to_cartesian( [e.pageX, e.pageY] );
-
 				iso_coords[0] = Math.floor( (iso_coords[0] - self.translation[0]) / terrain.tile_width) * terrain.tile_width;
 				iso_coords[1] = Math.floor( (iso_coords[1] - self.translation[1]) / terrain.tile_width) * terrain.tile_width;
 
 				self.ui_ctx.rect( iso_coords[0] + self.translation[0], iso_coords[1] + self.translation[1], terrain.tile_width - terrain.tile_spacer, terrain.tile_width - terrain.tile_spacer);
 				self.ui_ctx.fill();
 
-				var true_coords = Array();
-				true_coords[0] = (iso_coords[0]/terrain.tile_width) + (cube_size/2) + origin[0];
-				true_coords[1] = (iso_coords[1]/terrain.tile_width) + (cube_size/2) + origin[1];
-
-				// console.log( true_coords );
 			}
 		});
 
@@ -544,6 +570,38 @@ function UI(ui_canvas_id){
 
 }
 
+function Controls(){
+	var $container = $('.ui_container');
+	var $prompt = $('.prompt_container');
+
+	this.get_next_click = function(callback){
+		ui.click_callback = callback;
+	}
+
+	this.launch_base_button = function(){
+
+		var $button = $('<a>', {
+			class: 'button',
+			text: 'Launch Base',
+			click: function(){ controls.launch_base() }
+		});
+
+		$container.append( $button );
+
+	}
+
+	this.launch_base = function(){
+		$prompt.html('Click to place your base starting point.');
+
+		this.get_next_click(function(coords){
+
+			building.make_building('home_base', coords);
+
+		});
+	}
+
+}
+
 function Building(building_canvas_id){
 
 	this.building_canvas = document.getElementById(building_canvas_id);
@@ -571,6 +629,10 @@ function Building(building_canvas_id){
 			this.building_ctx.fillRect(tmp_x + 10, tmp_y + 10, 30, 30);
 		}
 
+	}
+
+	this.make_building = function(building_type, coords){
+		network.make_building(building_type, coords);
 	}
 
 	this.clear_buildings = function(){

@@ -45,7 +45,7 @@ gulp.task('css', ['scss'], function() {
 gulp.task('js', function() {
     return gulp.src('assets/js/**/*.js')
         .pipe(concat('all.min.js'))
-        // .pipe(uglify())
+        .pipe(uglify())
         .on('error', gutil.log)
         .pipe(gulp.dest('assets/dist'));
 });

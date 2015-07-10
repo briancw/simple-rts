@@ -53,28 +53,11 @@ wss.on('connection', function connection(ws) {
 					parsed_message.map_params.origin = [tmp_x, tmp_y];
 					tilemaps[origin_point] = generate_tilemap(parsed_message.map_params);
 				}
-				// console.log(tilemaps);
+
 				ws.send( get_json( {type:'map_data', tilemaps: tilemaps, origin_points:origin_points} ) );
 				// console.timeEnd('generate map');
 				break;
 
-			// case 'get_map_data_cache':
-			// 	console.time('map cache');
-			// 	var tilemap_cache = new Object();
-			// 	var origin_points = parsed_message.map_params.origin_points;
-
-			// 	for(var i in origin_points){
-			// 		var origin_point = parsed_message.map_params.origin_points[i];
-			// 		var tmp_x = Math.floor( origin_point / map_size);
-			// 		var tmp_y = origin_point - (tmp_x * map_size);
-
-			// 		parsed_message.map_params.origin = [tmp_x, tmp_y];
-			// 		tilemap_cache[origin_point] = generate_tilemap(parsed_message.map_params);
-			// 	}
-			// 	// console.log(tilemap_cache);
-			// 	ws.send( get_json( {type:'cached_map_data', tilemap_cache: tilemap_cache, origin_points:origin_points} ) );
-			// 	console.timeEnd('map cache');
-			// 	break;
 
 			case 'get_building_data':
 				get_buildings( parsed_message.params, function(ret){
@@ -89,15 +72,20 @@ wss.on('connection', function connection(ws) {
 				redis.flushdb();
 				break;
 
-			case 'save_thing_at_location':
+			case 'login':
+				ws.send( get_json({type:'login', user_id: 123456}) );
+				break;
+
+			case 'make_building':
 				var tmp_x = parsed_message.coords[0];
 				var tmp_y = parsed_message.coords[1];
+				var building_type = parsed_message.building_type;
 
 				var tmp_coord = (tmp_x * map_size) + tmp_y;
 				tmp_coord = pad( tmp_coord, 13 );
 
 				redis.select(3);
-				redis.set( tmp_coord, get_json({building: 'bunker'}) );
+				redis.set( tmp_coord, get_json({building: building_type}) );
 
 				break;
 
