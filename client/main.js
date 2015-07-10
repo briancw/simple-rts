@@ -37,7 +37,10 @@ window.requestAnimFrame = (function(){
 
 (function animloop(){
 	requestAnimFrame(animloop);
+
+	ui.pan_map_loop();
 	terrain.tilemap_update_loop();
+
 })();
 
 
@@ -79,39 +82,8 @@ $(document).ready(function(){
 	ui.click_listener();
 	ui.pan_listener();
 	ui.highlight_tile();
-/*
-	$(document).keydown(function(e){
-		var do_update = false;
+	ui.keyboard_listener();
 
-		if(e.keyCode == 87){ // Up
-			origin[1]--;
-			do_update = true;
-		} else if(e.keyCode == 83){ // Down
-			origin[1]++;
-			do_update = true;
-		} else if(e.keyCode == 65){ // Left
-			origin[0]--;
-			do_update = true;
-		} else if(e.keyCode == 68){ // Right
-			origin[0]++;
-			do_update = true;
-		} else if(e.keyCode == 187 || e.keyCode == 61){ // Plus
-			map_size *= 1.1;
-			origin = [Math.round((origin[0]*1.1) + (3)), Math.round((origin[1]*1.1) + (3)) ];
-			do_update = true;
-		} else if(e.keyCode == 189 || e.keyCode == 173){ // Minus
-			map_size *= 0.9;
-			origin = [(origin[0]*0.9) - (3), (origin[1]*0.9) - (3) ];
-			do_update = true;
-		}
-
-		if(do_update){
-			get_building_data();
-			get_map_data();
-		}
-
-	});
-*/
 });
 
 function Network(){
@@ -375,6 +347,9 @@ function UI(ui_canvas_id){
 
 	this.mouse_is_down = false;
 	this.buffer = 200;
+	this.pan_amount = 10;
+	this.half_map = (cube_size * terrain.tile_width / 2);
+	this.pan_amount_vertical = this.pan_amount * 1.5;
 	this.last_x;
 	this.last_y;
 
@@ -386,14 +361,15 @@ function UI(ui_canvas_id){
 		this.translation[0] += difference_x;
 		this.translation[1] += difference_y;
 
-		var half_map = (cube_size * terrain.tile_width / 2);
-		if(this.translation[0] >= half_map + this.buffer){
+		terrain.needs_update = true;
+
+		if(this.translation[0] >= this.half_map + this.buffer){
 			this.load_chunk(0,-1); // NW
-		} else if(this.translation[1] >= half_map + this.buffer) {
+		} else if(this.translation[1] >= this.half_map + this.buffer) {
 			this.load_chunk(1,-1); // NE
-		} else if(this.translation[0] <= -half_map - this.buffer) {
+		} else if(this.translation[0] <= -this.half_map - this.buffer) {
 			this.load_chunk(0,1); // SW
-		} else if(this.translation[1] <= -half_map - this.buffer) {
+		} else if(this.translation[1] <= -this.half_map - this.buffer) {
 			this.load_chunk(1,1); // SE
 		}
 	}
@@ -436,7 +412,6 @@ function UI(ui_canvas_id){
 
 				self.last_x = mouse_coords[0];
 				self.last_y = mouse_coords[1];
-				terrain.needs_update = true;
 			}
 		});
 	}
@@ -456,13 +431,6 @@ function UI(ui_canvas_id){
 		$('#'+this.ui_id).mouseup(function(e){
 			self.mouse_is_down = false;
 		});
-	}
-
-	this.clear_ui = function(){
-		this.ui_ctx.save();
-		this.ui_ctx.setTransform(1, 0, 0, 1, 0, 0);
-		this.ui_ctx.clearRect(0, 0, doc_width, doc_height);
-		this.ui_ctx.restore();
 	}
 
 	this.highlight_tile = function(){
@@ -490,6 +458,64 @@ function UI(ui_canvas_id){
 			}
 		});
 
+	}
+
+	this.keyboard_listener = function(){
+		this.move_up = false;
+		this.move_up = false;
+		this.move_up = false;
+		this.move_up = false;
+
+		$(document).keydown(function(e){
+			if(e.keyCode == 87){ // Up
+				self.move_up = true;
+			} else if(e.keyCode == 83){ // Down
+				self.move_down = true;
+			} else if(e.keyCode == 65){ // Left
+				self.move_left = true;
+			} else if(e.keyCode == 68){ // Right
+				self.move_right = true;
+			}
+
+		});
+
+		$(document).keyup(function(e){
+
+			if(e.keyCode == 87){ // Up
+				self.move_up = false;
+			} else if(e.keyCode == 83){ // Down
+				self.move_down = false;
+			} else if(e.keyCode == 65){ // Left
+				self.move_left = false;
+			} else if(e.keyCode == 68){ // Right
+				self.move_right = false;
+			}
+
+		});
+
+	}
+
+	this.pan_map_loop = function(){
+
+		if( this.move_up ){
+			this.translate_map( this.pan_amount, this.pan_amount );
+		} else if( this.move_down ){
+			this.translate_map( -this.pan_amount, -this.pan_amount );
+		}
+
+		if( this.move_left ){
+			this.translate_map( this.pan_amount, -this.pan_amount );
+		} else if( this.move_right ){
+			this.translate_map( -this.pan_amount, this.pan_amount );
+		}
+
+	}
+
+	this.clear_ui = function(){
+		this.ui_ctx.save();
+		this.ui_ctx.setTransform(1, 0, 0, 1, 0, 0);
+		this.ui_ctx.clearRect(0, 0, doc_width, doc_height);
+		this.ui_ctx.restore();
 	}
 
 	this.visual_error = function(error_message){
