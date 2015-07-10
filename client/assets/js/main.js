@@ -24,6 +24,7 @@ var terrain = new Terrain('main', resolution);
 var building = new Building('buildings');
 var ui = new UI('ui');
 var controls = new Controls();
+var world = new World('world');
 
 // Initialize main animation loop
 window.requestAnimFrame = (function(){
@@ -83,8 +84,6 @@ $(document).ready(function(){
 	ui.pan_listener();
 	ui.highlight_tile();
 	ui.keyboard_listener();
-
-
 
 });
 
@@ -243,42 +242,16 @@ function Terrain(terrain_canvas_id, resolution){
 
 		this.begin_path(tmp_ctx);
 
-		var height_levels = [
-			{level:1},
-			{level:0.8, color:'#7A8781'},
-			{level:0.7, color:'#59842A'},
-			{level:0.6, color:'#4C7124'},
-			{level:0.57, color:'#326800'},
-			{level:0, color:'#254e78'}
-		];
 		var current_height = 1;
 
-		while( current_height < height_levels.length ){
-			var ih = height_levels[current_height].level;
-			var lh = height_levels[current_height - 1].level;
-
-			for(var ix = start_x; ix < end_x; ix++ ){
-				for(var iy = start_y; iy < end_y; iy++ ){
-
-					var tmp_x = ix - start_x;
-					var tmp_y = iy - start_y;
-
-					var tmp_i = (tmp_x * cube_size) + tmp_y;
-
-					var height = tilemap[tmp_i].height;
-
-					if(height >= ih && height < lh){
-						this.draw_tile(ix * this.tile_width, iy * this.tile_width, tmp_ctx);
-					}
-
-				}
-			}
-
-			this.update_fill(height_levels[current_height].color, tmp_ctx);
-			this.fill(tmp_ctx);
+		for(var i in tilemap){
 			this.begin_path(tmp_ctx);
+			this.update_fill( tilemap[i].color, tmp_ctx);
 
-			current_height++;
+			for( var i2 in tilemap[i].tiles ){
+				this.draw_tile( tilemap[i].tiles[i2].x -(cube_size/2), tilemap[i].tiles[i2].y -(cube_size/2), tmp_ctx );
+			}
+			this.fill(tmp_ctx);
 		}
 	}
 
@@ -312,7 +285,7 @@ function Terrain(terrain_canvas_id, resolution){
 	}
 
 	this.draw_tile = function(x, y, ctx){
-		ctx.rect(x, y, this.tile_width - this.tile_spacer, this.tile_width - this.tile_spacer);
+		ctx.rect(x * this.tile_width, y * this.tile_width, this.tile_width - this.tile_spacer, this.tile_width - this.tile_spacer);
 	}
 
 	this.update_fill = function(new_fill_style, ctx){
