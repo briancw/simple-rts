@@ -206,11 +206,7 @@ function Terrain(terrain_canvas_id, resolution){
 
 	this.tmp_map_canvases = new Object();
 
-	var primary_tmp_canvas = document.createElement('canvas');
-	var primary_tmp_ctx = primary_tmp_canvas.getContext('2d');
-	primary_tmp_canvas.width = this.cube_length * 3;
-	primary_tmp_canvas.height = this.cube_length * 3;
-	primary_tmp_ctx.translate(this.cube_length * 1.5, this.cube_length * 1.5);
+	this.map_keys = Array();
 
 	this.terrain_ctx.fillStyle = 'red';
 
@@ -229,7 +225,14 @@ function Terrain(terrain_canvas_id, resolution){
 			this.draw_tilemap( tilemaps[i], i );
 		}
 
-		this.group_cached_maps();
+		var tmp_origin_points = origin_points();
+
+		for(var i in tmp_origin_points){
+			var tmp_canvas_index = tmp_origin_points[i];
+			this.map_keys[i] = tmp_canvas_index;
+		}
+
+		this.map_ready = true;
 		this.draw_cached();
 	}
 
@@ -288,34 +291,33 @@ function Terrain(terrain_canvas_id, resolution){
 		}
 	}
 
-	this.group_cached_maps = function(){
-		var tmp_keys = Array();
-		var tmp_origin_points = origin_points();
-
-		for(var i in tmp_origin_points){
-			var tmp_canvas_index = tmp_origin_points[i];
-			tmp_keys[i] = tmp_canvas_index;
-		}
-
-		this.clear_map_cache();
-
-		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[0]], (-this.cube_length*1.5), (-this.cube_length*1.5) );
-		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[1]], (-this.cube_length*1.5), (-this.cube_length/2) );
-		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[2]], (-this.cube_length*1.5), (this.cube_length/2) );
-		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[3]], (-this.cube_length/2), (-this.cube_length*1.5) - 0 );
-		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[4]], (-this.cube_length/2), (-this.cube_length/2) );
-		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[5]], (-this.cube_length/2), (this.cube_length/2) + 0);
-		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[6]], (this.cube_length/2), (-this.cube_length*1.5) );
-		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[7]], (this.cube_length/2), (-this.cube_length/2) );
-		primary_tmp_ctx.drawImage( this.tmp_map_canvases[tmp_keys[8]], (this.cube_length/2), (this.cube_length/2) );
-
-		this.map_ready = true;
-	}
-
 	this.draw_cached = function(){
 		this.clear_map();
-		this.terrain_ctx.drawImage( primary_tmp_canvas, (-this.cube_length*1.5) + ui.translation[0], (-this.cube_length*1.5) + ui.translation[1] );
-		// building.draw_buildings();
+
+		if(ui.translation[0] > 0){
+			this.terrain_ctx.drawImage( this.tmp_map_canvases[this.map_keys[0]], (-this.cube_length*1.5) + ui.translation[0], (-this.cube_length*1.5) + ui.translation[1] );
+			this.terrain_ctx.drawImage( this.tmp_map_canvases[this.map_keys[1]], (-this.cube_length*1.5) + ui.translation[0], (-this.cube_length/2) + ui.translation[1] );
+			this.terrain_ctx.drawImage( this.tmp_map_canvases[this.map_keys[2]], (-this.cube_length*1.5) + ui.translation[0], (this.cube_length/2) + ui.translation[1] );
+		}
+
+		if(ui.translation[1] > 0){
+			this.terrain_ctx.drawImage( this.tmp_map_canvases[this.map_keys[3]], (-this.cube_length/2) + ui.translation[0], (-this.cube_length*1.5) + ui.translation[1] );
+		}
+
+		this.terrain_ctx.drawImage( this.tmp_map_canvases[this.map_keys[4]], (-this.cube_length/2) + ui.translation[0], (-this.cube_length/2) + ui.translation[1] );
+
+		if(ui.translation[1] < 0){
+			this.terrain_ctx.drawImage( this.tmp_map_canvases[this.map_keys[5]], (-this.cube_length/2) + ui.translation[0], (this.cube_length/2) + ui.translation[1] );
+		}
+
+		if(ui.translation[0] < 0){
+			this.terrain_ctx.drawImage( this.tmp_map_canvases[this.map_keys[6]], (this.cube_length/2) + ui.translation[0], (-this.cube_length*1.5) + ui.translation[1] );
+			this.terrain_ctx.drawImage( this.tmp_map_canvases[this.map_keys[7]], (this.cube_length/2) + ui.translation[0], (-this.cube_length/2) + ui.translation[1] );
+			this.terrain_ctx.drawImage( this.tmp_map_canvases[this.map_keys[8]], (this.cube_length/2) + ui.translation[0], (this.cube_length/2) + ui.translation[1] );
+		}
+
+		building.draw_buildings();
+
 	}
 
 	this.draw_tile = function(x, y, ctx){
@@ -397,6 +399,7 @@ function UI(ui_canvas_id){
 	}
 
 	this.load_chunk = function(direction, value){
+		console.log('l')
 		// Load some more map data based on direction
 		this.translation[direction] = -this.translation[direction] - (this.buffer * value * 2);
 		terrain.map_ready = false;
