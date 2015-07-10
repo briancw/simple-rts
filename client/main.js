@@ -399,7 +399,6 @@ function UI(ui_canvas_id){
 	}
 
 	this.load_chunk = function(direction, value){
-		console.log('l')
 		// Load some more map data based on direction
 		this.translation[direction] = -this.translation[direction] - (this.buffer * value * 2);
 		terrain.map_ready = false;
@@ -423,6 +422,12 @@ function UI(ui_canvas_id){
 	this.pan_listener = function(){
 		$('#'+this.ui_id).mousemove(function(e){
 			if(self.mouse_is_down && terrain.map_ready){
+
+				if(e.which === 0){
+					self.mouse_is_down = false;
+					return false;
+				}
+
 				var mouse_coords = self.iso_to_cartesian([e.pageX, e.pageY]);
 				var tmp_difference_x = mouse_coords[0] - self.last_x;
 				var tmp_difference_y = mouse_coords[1] - self.last_y;
@@ -438,12 +443,14 @@ function UI(ui_canvas_id){
 
 	this.click_listener = function(){
 		$('#'+this.ui_id).mousedown(function(e){
-			var mouse_coords = self.iso_to_cartesian([e.pageX, e.pageY]);
+			if(e.which === 1){
+				var mouse_coords = self.iso_to_cartesian([e.pageX, e.pageY]);
 
-			self.last_x = mouse_coords[0];
-			self.last_y = mouse_coords[1];
-			self.mouse_is_down = true;
-			self.clear_ui();
+				self.last_x = mouse_coords[0];
+				self.last_y = mouse_coords[1];
+				self.mouse_is_down = true;
+				self.clear_ui();
+			}
 		});
 
 		$('#'+this.ui_id).mouseup(function(e){
