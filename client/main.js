@@ -3,21 +3,20 @@ var doc_width = $(window).width();
 var doc_height = $(window).height();
 var doc_diagonal = Math.ceil(Math.sqrt( Math.pow(doc_width,2) + Math.pow(doc_height*2,2) ));
 var iso_width = Math.sqrt( Math.pow(doc_width, 2) + Math.pow(doc_width/2, 2) );
+
 var url_resolution = location.search.split('resolution=')[1];
 var resolution = (url_resolution) ? parseInt(url_resolution,10) : 50;
 
 var url_map_size = location.search.split('map_size=')[1];
-var map_size = (url_map_size) ? parseInt(url_map_size,10) : 100;
+var map_size = (url_map_size) ? parseInt(url_map_size,10) : 2500000;
 
 var cube_size = Math.ceil(doc_diagonal / resolution);
 cube_size %2 == 0 ? cube_size : cube_size++;
 cube_size = cube_size > 52 ? 52 : cube_size; // Something weird happens if the canvas is wider than 8048, so this is a temporary band-aid
 // cube_size = 25;
 
-var origin = [0,0];
-origin = [552648, 429251];
+var origin = [552648, 429251];
 var origin_point = coords_to_index(origin);
-map_size = 2500000;
 
 // Initialize core game classes
 var terrain = new Terrain('main', resolution);
@@ -132,6 +131,15 @@ function Network(){
 		ws.send( get_json( {type:'get_building_data', params: building_params } ) );
 	};
 
+	this.make_building = function(x, y){
+		var tmp_coords = [ origin[0] + x, origin[1] + y ]
+		ws.send( get_json({type:'save_thing_at_location', coords:[tmp_coords[0], tmp_coords[1]]}) )
+	}
+
+	this.clear_building_data = function(){
+		ws.send( get_json({type:'clear_building_data'}) );
+	}
+
 	ws.onmessage = function (ret){
 		var received_msg = JSON.parse(ret.data);
 		var message_type = received_msg.type;
@@ -186,7 +194,6 @@ function Terrain(terrain_canvas_id, resolution){
 	this.map_ready = false;
 
 	this.update_tilemaps = function(tilemaps){
-
 		for(var i in tilemaps){
 
 			if( typeof(this.tmp_map_canvases[i]) != 'undefined' ){
@@ -328,14 +335,8 @@ function Terrain(terrain_canvas_id, resolution){
 		this.terrain_ctx.save();
 		this.terrain_ctx.setTransform(1, 0, 0, 1, 0, 0);
 		this.terrain_ctx.clearRect(0, 0, doc_width, doc_height);
+		// this.terrain_ctx.fillRect(0,0,doc_width,doc_height);
 		this.terrain_ctx.restore();
-	}
-
-	this.clear_map_cache = function(){
-		primary_tmp_ctx.save();
-		primary_tmp_ctx.setTransform(1, 0, 0, 1, 0, 0);
-		primary_tmp_ctx.clearRect(0, 0, this.cube_length * 3, this.cube_length * 3);
-		primary_tmp_ctx.restore();
 	}
 
 }
@@ -346,7 +347,7 @@ function UI(ui_canvas_id){
 	this.ui_ctx = this.ui_canvas.getContext('2d');
 
 	this.mouse_is_down = false;
-	this.buffer = 200;
+	this.buffer = (cube_size * terrain.tile_width / 4);
 	this.pan_amount = 10;
 	this.half_map = (cube_size * terrain.tile_width / 2);
 	this.pan_amount_vertical = this.pan_amount * 1.5;
@@ -362,6 +363,7 @@ function UI(ui_canvas_id){
 		this.translation[1] += difference_y;
 
 		terrain.needs_update = true;
+		this.clear_ui();
 
 		if(this.translation[0] >= this.half_map + this.buffer){
 			this.load_chunk(0,-1); // NW
@@ -424,7 +426,6 @@ function UI(ui_canvas_id){
 				self.last_x = mouse_coords[0];
 				self.last_y = mouse_coords[1];
 				self.mouse_is_down = true;
-				self.clear_ui();
 			}
 		});
 
@@ -498,9 +499,9 @@ function UI(ui_canvas_id){
 	this.pan_map_loop = function(){
 
 		if( this.move_up ){
-			this.translate_map( this.pan_amount, this.pan_amount );
+			this.translate_map( this.pan_amount_vertical, this.pan_amount_vertical );
 		} else if( this.move_down ){
-			this.translate_map( -this.pan_amount, -this.pan_amount );
+			this.translate_map( -this.pan_amount_vertical, -this.pan_amount_vertical );
 		}
 
 		if( this.move_left ){
@@ -579,15 +580,4 @@ function Building(building_canvas_id){
 		this.building_ctx.restore();
 	}
 
-	this.make_building = function(x, y){
-		var tmp_coords = [ origin[0] + x, origin[1] + y ]
-		// ws.send( get_json({type:'save_thing_at_location', coords:[tmp_coords[0], tmp_coords[1]]}) )
-		// Send call to network function
-	}
-
-	this.clear_building_data = function(){
-		// ws.send( get_json({type:'clear_building_data'}) );
-		// Send call to network function
-	}
 }
-
