@@ -1,5 +1,4 @@
 var FastSimplexNoise = require('fast-simplex-noise');
-var fast_simplex = new FastSimplexNoise({random: random});
 
 var WebSocketServer = require('ws').Server;
 var wss = new WebSocketServer({ port: 9005 });
@@ -13,8 +12,9 @@ redis.on("error", function(err) {
 
 redis.select(1);
 
+// var world_seed = Math.random();
 function random(){
-	// return Math.random();
+	// return world_seed;
 	return 0.4710536374424983;
 }
 
@@ -76,6 +76,14 @@ wss.on('connection', function connection(ws) {
 				ws.send( get_json({type:'login', user_id: 123456}) );
 				break;
 
+			case 'world_map_data':
+				console.log(parsed_message);
+				console.time('g');
+				var world_tilemap = generate_tilemap( {map_size: parsed_message.map_size, cube_size: parsed_message.cube_size} );
+				console.timeEnd('g');
+				ws.send( get_json( {type:'world_map_data', world_tilemap: world_tilemap} ));
+				break;
+
 			case 'make_building':
 				var tmp_x = parsed_message.coords[0];
 				var tmp_y = parsed_message.coords[1];
@@ -91,6 +99,7 @@ wss.on('connection', function connection(ws) {
 
 			default:
 				console.log('Unkown client request. Unknown Type.');
+				console.log(parsed_message);
 				break;
 
 		}
@@ -142,9 +151,9 @@ wss.on('connection', function connection(ws) {
 			var origin = [0,0];
 		}
 
-		if(cube_size > 800){
-			return false;
-		}
+		// if(cube_size > 800){
+		// 	return false;
+		// }
 
 		var tilemap = {
 			ocean: { tiles: Array(), color: '#254e78'},

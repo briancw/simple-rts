@@ -67,7 +67,7 @@ function origin_points(){
 
 $(document).ready(function(){
 
-	$('.canvas').each(function(){
+	$('.canvas').not('#world').each(function(){
 		$(this).attr('width', doc_width);
 		$(this).attr('height', doc_height);
 
@@ -125,6 +125,15 @@ function Network(){
 		self.login('brian');
 	};
 
+	this.server_call = function(type, params){
+		var parsed_params = {type: type};
+		for(var i in params){
+			parsed_params[i] = params[i];
+		}
+
+		ws.send( get_json(parsed_params) );
+	}
+
 	this.get_map_data = function(origin_points){
 		var map_params = {cube_size: cube_size, map_size: map_size, resolution: resolution, origin_points: origin_points};
 		ws.send( get_json({type:'get_map_data', map_params:map_params}) );
@@ -164,6 +173,10 @@ function Network(){
 
 			case 'login':
 				controls.launch_base_button();
+				break;
+
+			case 'world_map_data':
+				world.update_worldmap(received_msg.world_tilemap);
 				break;
 
 			default:

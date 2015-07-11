@@ -16,6 +16,16 @@ function time_end(timer_name, quiet_mode){
 	console.log( timer_name + ' ' + time_took + 'ms' );
 }
 
+function time(timer_name){
+
+	if( typeof(timers[timer_name]) == 'undefined' ){
+		time_start(timer_name);
+	} else {
+		time_end(timer_name);
+	}
+
+}
+
 function rough_size_of_object( object ) {
 
 	var objectList = [];
