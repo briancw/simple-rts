@@ -20,6 +20,7 @@ var origin_point = coords_to_index(origin);
 
 // Initialize core game classes
 var network = new Network();
+var user = new User();
 var terrain = new Terrain('main', resolution);
 var building = new Building('buildings');
 var ui = new UI('ui');
@@ -87,8 +88,60 @@ $(document).ready(function(){
 
 });
 
-function Network(){
+// zzz
+function User(){
+	this.auth_token = Cookies.get('auth_token');
 
+	this.check_authentication = function(){
+		if(typeof(this.auth_token) == 'undefined'){
+			this.login();
+		} else {
+			this.authenticate();
+		}
+	}
+
+	this.authenticate = function(){
+		network.server_call('authenticate', {auth_token: this.auth_token});
+	}
+
+	this.authenticated = function(success){
+		if(success){
+			this.get_user_info();
+		} else {
+			Cookies.remove('auth_token');
+			cl('Failed to authenticate. Reauthenticate.')
+		}
+	}
+
+	this.login = function(){
+		network.server_call('login', {username: 'brian', password: 123456});
+	}
+
+	this.update_auth_token = function(auth_token){
+		this.auth_token = auth_token;
+		Cookies.set('auth_token', auth_token, {expires: 1, path: '/'})
+		this.get_user_info();
+		cl( auth_token );
+	}
+
+	this.get_user_info = function(){
+		network.server_call('user_info', {auth_token: this.auth_token})
+	}
+
+	this.update_user_info = function(user_info){
+		cl(user_info);
+	}
+
+
+// cl( Cookies.get() );
+	// function get_user_properties(){
+
+	// }
+	this.check_authentication();
+
+}
+
+function Network(){
 	var self = this;
 
 	if (!"WebSocket" in window){
@@ -97,6 +150,7 @@ function Network(){
 
 	var init_socket_connect = false;
 	var current_env = window.location.host;
+	this.queued_tasks = Object();
 
 	if(current_env == 'simple-rts.zimmerloe.com'){
 		var server_url = 'ws://simple-rts.zimmerloe.com:9005';
@@ -119,19 +173,29 @@ function Network(){
 
 	ws.onopen = function(){
 		init_socket_connect = true;
-		self.get_map_data( origin_points() );
-		self.get_building_data();
-
-		self.login('brian');
+		self.run_queued_tasks();
+		// self.get_map_data( origin_points() );
+		// self.get_building_data();
+		// self.login('brian');
 	};
 
 	this.server_call = function(type, params){
-		var parsed_params = {type: type};
-		for(var i in params){
-			parsed_params[i] = params[i];
+		if(init_socket_connect){
+			var parsed_params = {type: type};
+			for(var i in params){
+				parsed_params[i] = params[i];
+			}
+			ws.send( get_json(parsed_params) );
+		} else {
+			var tmp_time = new Date().getTime();
+			this.queued_tasks[tmp_time] = {type: type, params: params}
 		}
+	}
 
-		ws.send( get_json(parsed_params) );
+	this.run_queued_tasks = function(){
+		for(var i in this.queued_tasks){
+			this.server_call( this.queued_tasks[i].type, this.queued_tasks[i].params );
+		}
 	}
 
 	this.get_map_data = function(origin_points){
@@ -172,7 +236,15 @@ function Network(){
 				break;
 
 			case 'login':
-				controls.launch_base_button();
+				user.update_auth_token(received_msg.auth_token);
+				break;
+
+			case 'authenticate':
+				user.authenticated( received_msg.success );
+				break;
+
+			case 'user_info':
+				user.update_user_info( received_msg.user_info );
 				break;
 
 			case 'world_map_data':
@@ -352,7 +424,7 @@ function UI(ui_canvas_id){
 	this.last_x;
 	this.last_y;
 	this.is_click = true;
-	this.click_callback = function(t){ console.log(t) };
+	this.click_callback = null;
 
 	this.translation = [0,0];
 

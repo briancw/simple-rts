@@ -26,6 +26,10 @@ function time(timer_name){
 
 }
 
+function cl(input){
+	console.log(input);
+}
+
 function rough_size_of_object( object ) {
 
 	var objectList = [];

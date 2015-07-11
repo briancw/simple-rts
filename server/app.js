@@ -1,5 +1,5 @@
 var FastSimplexNoise = require('fast-simplex-noise');
-
+var crypto = require('crypto');
 var WebSocketServer = require('ws').Server;
 var wss = new WebSocketServer({ port: 9005 });
 
@@ -25,6 +25,8 @@ fast_simplex.persistence = 0.5;
 
 var map_size = 100;
 
+var authenticated_users = Object();
+
 wss.on('connection', function connection(ws) {
 
 	ws.on('message', function incoming(message) {
@@ -39,7 +41,6 @@ wss.on('connection', function connection(ws) {
 		}
 
 		switch (message_type){
-
 			case 'get_map_data':
 				// console.time('generate map');
 				var tilemaps = new Object();
@@ -73,11 +74,35 @@ wss.on('connection', function connection(ws) {
 				break;
 
 			case 'login':
-				ws.send( get_json({type:'login', user_id: 123456}) );
+				// Do actual username password check
+				var user_id = 123;
+				var tmp_hash = crypto.createHash('md5').digest('hex');
+				authenticated_users[tmp_hash] = user_id;
+				ws.send( get_json({type:'login', auth_token: tmp_hash}) );
+				break;
+
+			case 'authenticate':
+				if( typeof( authenticated_users[parsed_message.auth_token]) == 'number' ){
+					var success = true;
+				} else {
+					var success = false;
+				}
+				ws.send( get_json({type:'authenticate', success: success}) );
+				break;
+
+			case 'user_info':
+				if( typeof( authenticated_users[parsed_message.auth_token]) == 'number' ){
+
+					redis.select(1);
+					redis.get( authenticated_users[parsed_message.auth_token], function(err, results){
+
+						ws.send( get_json({type:'user_info', user_info: results}) );
+
+					});
+				}
 				break;
 
 			case 'world_map_data':
-				console.log(parsed_message);
 				console.time('g');
 				var world_tilemap = generate_tilemap( {map_size: parsed_message.map_size, cube_size: parsed_message.cube_size} );
 				console.timeEnd('g');

@@ -9,7 +9,6 @@ function World(world_canvas_id){
 	this.tile_width = 4;
 
 	this.get_world_map = function(){
-		// network.server_call('world_map_data', {map_size: Math.floor(Math.sqrt(doc_height)), cube_size: doc_height });
 		network.server_call('world_map_data', {map_size: doc_height / this.tile_width, cube_size: doc_height / this.tile_width });
 	}
 
@@ -52,7 +51,7 @@ function World(world_canvas_id){
 		}
 	}
 
-	setTimeout(function(){
-		self.get_world_map();
-	}, 1000)
+	// setTimeout(function(){
+	// 	self.get_world_map();
+	// }, 1000);
 }
