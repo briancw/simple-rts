@@ -174,7 +174,7 @@ wss.on('connection', function connection(ws) {
 			map_size = 100;
 		}
 
-		console.log( map_params );
+		// console.log( map_params );
 		if( typeof(map_params.origin) != 'undefined' && map_params.origin.length ){
 			var origin = map_params.origin;
 		} else {

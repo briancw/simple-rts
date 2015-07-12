@@ -639,21 +639,30 @@ function UI(ui_canvas_id){
 function Controls(){
 	var $container = $('.ui_container');
 	var $prompt = $('.prompt_container');
+	this.shown_buttons = Object();
 
 	this.get_next_click = function(callback){
-		ui.click_callback = callback;
+		world.click_callback = callback;
 	}
 
 	this.launch_base_button = function(){
 
-		var $button = $('<a>', {
-			class: 'button',
-			text: 'Launch Base',
-			click: function(){ controls.launch_base() }
-		});
+		if( typeof(this.shown_buttons.launch_base) != 'object'){
+			var $button = $('<a>', {
+				class: 'button',
+				text: 'Launch Base',
+				click: function(){ controls.launch_base() }
+			});
 
-		$container.append( $button );
+			$container.append( $button );
+			this.shown_buttons.launch_base = $button;
+		}
 
+	}
+
+	this.remove_launch_base_button = function(){
+		this.shown_buttons.launch_base.remove();
+		this.shown_buttons.launch_base = '';
 	}
 
 	this.launch_base = function(){
@@ -661,7 +670,18 @@ function Controls(){
 
 		this.get_next_click(function(coords){
 
+			cl(coords);
 			building.make_building('home_base', coords);
+			world.hide_world_viewer();
+			origin = coords;
+			// self.remove_launch_base_button();
+
+			network.get_map_data( origin_points() );
+			network.get_building_data();
+			ui.click_listener();
+			ui.pan_listener();
+			ui.highlight_tile();
+			ui.keyboard_listener();
 
 		});
 	}
