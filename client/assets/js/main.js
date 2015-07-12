@@ -81,10 +81,10 @@ $(document).ready(function(){
 		tmp_ctx.rotate(rot_radians);
 	});
 
-	ui.click_listener();
-	ui.pan_listener();
-	ui.highlight_tile();
-	ui.keyboard_listener();
+	// ui.click_listener();
+	// ui.pan_listener();
+	// ui.highlight_tile();
+	// ui.keyboard_listener();
 
 });
 
@@ -130,6 +130,10 @@ function User(){
 
 	this.update_user_info = function(user_info){
 		cl(user_info);
+	}
+
+	this.new_user_initialization = function(){
+		world.initialize_world_viewer();
 	}
 
 
@@ -245,6 +249,10 @@ function Network(){
 
 			case 'user_info':
 				user.update_user_info( received_msg.user_info );
+				break;
+
+			case 'new_user':
+				user.new_user_initialization();
 				break;
 
 			case 'world_map_data':

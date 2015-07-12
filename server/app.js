@@ -96,7 +96,11 @@ wss.on('connection', function connection(ws) {
 					redis.select(1);
 					redis.get( authenticated_users[parsed_message.auth_token], function(err, results){
 
-						ws.send( get_json({type:'user_info', user_info: results}) );
+						if( results === null){
+							ws.send( get_json({type:'new_user'}) );
+						} else {
+							ws.send( get_json({type:'user_info', user_info: results}) );
+						}
 
 					});
 				}
@@ -104,7 +108,7 @@ wss.on('connection', function connection(ws) {
 
 			case 'world_map_data':
 				console.time('g');
-				var world_tilemap = generate_tilemap( {map_size: parsed_message.map_size, cube_size: parsed_message.cube_size} );
+				var world_tilemap = generate_tilemap( {map_size: parsed_message.map_size, cube_size: parsed_message.cube_size, origin: parsed_message.origin} );
 				console.timeEnd('g');
 				ws.send( get_json( {type:'world_map_data', world_tilemap: world_tilemap} ));
 				break;
@@ -170,6 +174,7 @@ wss.on('connection', function connection(ws) {
 			map_size = 100;
 		}
 
+		console.log( map_params );
 		if( typeof(map_params.origin) != 'undefined' && map_params.origin.length ){
 			var origin = map_params.origin;
 		} else {
