@@ -99,11 +99,22 @@ wss.on('connection', function connection(ws) {
 						if( results === null){
 							ws.send( get_json({type:'new_user'}) );
 						} else {
-							ws.send( get_json({type:'user_info', user_info: results}) );
+							ws.send( get_json({type:'user_info', user_info: JSON.parse(results)}) );
 						}
 
 					});
 				}
+				break;
+
+			case 'update_user_info':
+				if( typeof( authenticated_users[parsed_message.auth_token]) == 'number' ){
+					var user_id = authenticated_users[parsed_message.auth_token];
+					console.log( parsed_message.user_info );
+
+					redis.select(1);
+					redis.set(user_id, get_json(parsed_message.user_info) );
+				}
+
 				break;
 
 			case 'world_map_data':

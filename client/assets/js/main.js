@@ -128,12 +128,31 @@ function User(){
 		network.server_call('user_info', {auth_token: this.auth_token})
 	}
 
+	this.recieved_user_info = function(user_info){
+
+		origin = user_info.user_home_base;
+
+		network.get_map_data( origin_points() );
+		network.get_building_data();
+		ui.click_listener();
+		ui.pan_listener();
+		ui.highlight_tile();
+		ui.keyboard_listener();
+
+		// var parsed_user_info = JSON.parse( user_info );
+
+	}
+
 	this.update_user_info = function(user_info){
-		cl(user_info);
+		network.server_call('update_user_info', {auth_token: this.auth_token, user_info: user_info})
 	}
 
 	this.new_user_initialization = function(){
 		world.initialize_world_viewer();
+	}
+
+	this.create_user_base = function(base_coords){
+		this.update_user_info( { user_home_base: base_coords } )
 	}
 
 
@@ -248,7 +267,7 @@ function Network(){
 				break;
 
 			case 'user_info':
-				user.update_user_info( received_msg.user_info );
+				user.recieved_user_info( received_msg.user_info );
 				break;
 
 			case 'new_user':
@@ -637,6 +656,8 @@ function UI(ui_canvas_id){
 }
 
 function Controls(){
+	var self = this;
+
 	var $container = $('.ui_container');
 	var $prompt = $('.prompt_container');
 	this.shown_buttons = Object();
@@ -674,7 +695,10 @@ function Controls(){
 			building.make_building('home_base', coords);
 			world.hide_world_viewer();
 			origin = coords;
-			// self.remove_launch_base_button();
+			self.remove_launch_base_button();
+
+			//zzz
+			user.create_user_base(coords);
 
 			network.get_map_data( origin_points() );
 			network.get_building_data();
